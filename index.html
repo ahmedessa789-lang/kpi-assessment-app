@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: auto;
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+    }
+
+    h1, h2, h3 {
+      color: #1f3b5b;
+      margin-top: 0;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    input, select {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1f6feb;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    .save-btn {
+      background: #198754;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 14px;
+      color: white;
+    }
+
+    .green { background: #198754; }
+    .yellow { background: #f59e0b; }
+    .red { background: #dc3545; }
+
+    .score {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    .overall-box {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 14px;
+      color: white;
+    }
+
+    .list-box {
+      margin-top: 20px;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+    }
+
+    ul {
+      padding-left: 20px;
+      margin-bottom: 0;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .company-row {
+      margin-top: 12px;
+      max-width: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>📊 KPI Assessment Dashboard</h1>
+      <button onclick="calculateKPI()">Calculate KPI</button>
+    </div>
+
+    <div class="actions-row">
+  <button class="save-btn" onclick="saveKPI()">Save Assessment</button>
+  <button onclick="exportExcel()">Export Excel</button>
+</div>
+      
+    
+
+    <div class="section">
+      <h3>Company Info</h3>
+      <div class="company-row">
+        <input id="company_name" type="text" placeholder="Company Name">
+      </div>
+      <div class="company-row">
+        <select id="companySelect" onchange="loadCompany()">
+          <option value="">Select Company</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Sales Input</h3>
+      <div class="grid">
+        <input id="current_revenue" type="number" placeholder="Current Revenue">
+        <input id="previous_revenue" type="number" placeholder="Previous Revenue">
+        <input id="leads_count" type="number" placeholder="Leads Count">
+        <input id="converted_customers" type="number" placeholder="Converted Customers">
+        <input id="orders_count" type="number" placeholder="Orders Count">
+        <input id="sales_target" type="number" placeholder="Sales Target">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Finance Input</h3>
+      <div class="grid">
+        <input id="revenue" type="number" placeholder="Revenue">
+        <input id="cogs" type="number" placeholder="COGS">
+        <input id="total_expenses" type="number" placeholder="Total Expenses">
+        <input id="accounts_receivable" type="number" placeholder="Accounts Receivable">
+        <input id="average_daily_sales" type="number" placeholder="Average Daily Sales">
+        <input id="cash_in" type="number" placeholder="Cash In">
+        <input id="cash_out" type="number" placeholder="Cash Out">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Operations Input</h3>
+      <div class="grid">
+        <input id="total_orders" type="number" placeholder="Total Orders">
+        <input id="on_time_orders" type="number" placeholder="On-Time Orders">
+        <input id="completed_orders" type="number" placeholder="Completed Orders">
+        <input id="error_cases" type="number" placeholder="Error Cases">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Inventory Input</h3>
+      <div class="grid">
+        <input id="average_inventory" type="number" placeholder="Average Inventory">
+        <input id="accurate_count_items" type="number" placeholder="Accurate Count Items">
+        <input id="total_counted_items" type="number" placeholder="Total Counted Items">
+        <input id="out_of_stock_cases" type="number" placeholder="Out of Stock Cases">
+        <input id="total_sku_requests" type="number" placeholder="Total SKU Requests">
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card green" id="salesCard">
+        <h3>Sales</h3>
+        <div class="score" id="salesScore">0</div>
+        <div id="salesStatus">-</div>
+      </div>
+
+      <div class="card green" id="financeCard">
+        <h3>Finance</h3>
+        <div class="score" id="financeScore">0</div>
+        <div id="financeStatus">-</div>
+      </div>
+
+      <div class="card green" id="operationsCard">
+        <h3>Operations</h3>
+        <div class="score" id="operationsScore">0</div>
+        <div id="operationsStatus">-</div>
+      </div>
+
+      <div class="card green" id="inventoryCard">
+        <h3>Inventory</h3>
+        <div class="score" id="inventoryScore">0</div>
+        <div id="inventoryStatus">-</div>
+      </div>
+    </div>
+
+    <div class="overall-box green" id="overallBox">
+      <h2 id="companyTitle">Overall Assessment</h2>
+      <div class="score" id="overallScore">0</div>
+      <div id="overallStatus">-</div>
+    </div>
+
+    <div class="list-box">
+      <h3>Recommendations</h3>
+      <ul id="recommendationsList"></ul>
+    </div>
+  </div>
+
+  <script>
+    function setColorClass(elementId, color) {
+      const el = document.getElementById(elementId);
+      el.classList.remove("green", "yellow", "red");
+      el.classList.add(color);
+    }
+
+    function getPayload() {
+      return {
+        company_name: document.getElementById("company_name").value || "Company",
+        current_revenue: Number(document.getElementById("current_revenue").value) || 0,
+        previous_revenue: Number(document.getElementById("previous_revenue").value) || 0,
+        leads_count: Number(document.getElementById("leads_count").value) || 0,
+        converted_customers: Number(document.getElementById("converted_customers").value) || 0,
+        orders_count: Number(document.getElementById("orders_count").value) || 0,
+        sales_target: Number(document.getElementById("sales_target").value) || 0,
+
+        revenue: Number(document.getElementById("revenue").value) || 0,
+        cogs: Number(document.getElementById("cogs").value) || 0,
+        total_expenses: Number(document.getElementById("total_expenses").value) || 0,
+        accounts_receivable: Number(document.getElementById("accounts_receivable").value) || 0,
+        average_daily_sales: Number(document.getElementById("average_daily_sales").value) || 0,
+        cash_in: Number(document.getElementById("cash_in").value) || 0,
+        cash_out: Number(document.getElementById("cash_out").value) || 0,
+
+        total_orders: Number(document.getElementById("total_orders").value) || 0,
+        on_time_orders: Number(document.getElementById("on_time_orders").value) || 0,
+        completed_orders: Number(document.getElementById("completed_orders").value) || 0,
+        error_cases: Number(document.getElementById("error_cases").value) || 0,
+
+        average_inventory: Number(document.getElementById("average_inventory").value) || 0,
+        accurate_count_items: Number(document.getElementById("accurate_count_items").value) || 0,
+        total_counted_items: Number(document.getElementById("total_counted_items").value) || 0,
+        out_of_stock_cases: Number(document.getElementById("out_of_stock_cases").value) || 0,
+        total_sku_requests: Number(document.getElementById("total_sku_requests").value) || 0
+      };
+    }
+
+    function updateUI(data) {
+      document.getElementById("companyTitle").innerText = `${data.company_name} - Overall Assessment`;
+
+      document.getElementById("salesScore").innerText = data.sales.score;
+      document.getElementById("salesStatus").innerText = data.sales.status;
+      setColorClass("salesCard", data.sales.color);
+
+      document.getElementById("financeScore").innerText = data.finance.score;
+      document.getElementById("financeStatus").innerText = data.finance.status;
+      setColorClass("financeCard", data.finance.color);
+
+      document.getElementById("operationsScore").innerText = data.operations.score;
+      document.getElementById("operationsStatus").innerText = data.operations.status;
+      setColorClass("operationsCard", data.operations.color);
+
+      document.getElementById("inventoryScore").innerText = data.inventory.score;
+      document.getElementById("inventoryStatus").innerText = data.inventory.status;
+      setColorClass("inventoryCard", data.inventory.color);
+
+      document.getElementById("overallScore").innerText = data.overall.score;
+      document.getElementById("overallStatus").innerText = data.overall.status;
+      setColorClass("overallBox", data.overall.color);
+
+      const recList = document.getElementById("recommendationsList");
+      recList.innerHTML = "";
+
+      data.recommendations.forEach(item => {
+        const li = document.createElement("li");
+        li.innerText = item;
+        recList.appendChild(li);
+      });
+    }
+
+    function calculateKPI() {
+      const payload = getPayload();
+
+      fetch("http://127.0.0.1:8001/kpi/calculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        updateUI(data);
+      })
+      .catch(error => {
+        console.error("Error calculating KPI:", error);
+        alert("Error calculating KPI");
+      });
+    }
+
+    function saveKPI() {
+      const payload = getPayload();
+
+      fetch("http://127.0.0.1:8001/kpi/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(() => {
+        alert("Saved successfully");
+        loadCompanies();
+      })
+      .catch(error => {
+        console.error("Error saving KPI:", error);
+        alert("Error saving KPI");
+      });
+    }
+
+    function loadCompanies() {
+      fetch("http://127.0.0.1:8001/kpi/list")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("companySelect");
+          select.innerHTML = '<option value="">Select Company</option>';
+
+          data.companies.forEach(name => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.innerText = name;
+            select.appendChild(option);
+          });
+        })
+        .catch(error => {
+          console.error("Error loading companies:", error);
+        });
+    }
+
+    function loadCompany() {
+      const name = document.getElementById("companySelect").value;
+      if (!name) return;
+
+      fetch(`http://127.0.0.1:8001/kpi/company/${name}`)
+        .then(res => res.json())
+        .then(data => {
+          updateUI(data);
+        })
+        .catch(error => {
+          console.error("Error loading company:", error);
+        });
+    }
+    function exportExcel() {
+  const company = document.getElementById("company_name").value || "KPI_Report";
+
+  window.open(`http://127.0.0.1:8001/kpi/export/${company}`, "_blank");
+}
+    window.onload = function () {
+      loadCompanies();
+    };
+  </script>
+</body>
+</html>
