@@ -1,3 +1,5 @@
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,9 +10,24 @@ app = FastAPI(
     title="KPI Assessment API",
     version="1.0.0"
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def init_db():
-    ...
+    conn = sqlite3.connect("kpi.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS assessments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_name TEXT,
+        overall_score REAL,
+        overall_status TEXT,
+        created_at TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
     
 init_db()
 
@@ -58,8 +75,8 @@ class KPIInput(BaseModel):
 
 
 @app.get("/")
-def root():
-    return {"message": "KPI Assessment API is running"}
+def home():
+    return FileResponse("index.html")
 
 
 def score_high_better(value, excellent, good, average):
@@ -164,7 +181,7 @@ def calculate_kpi(data: KPIInput):
         recommendations.append("Overall performance is stable. Focus on continuous monitoring and incremental improvement.")
 
     return {
-        "company_name": data.company_name,
+        "_name": data.company_name,
         "sales": {
             "score": sales_score,
             "status": sales_status,
