@@ -76,7 +76,7 @@ class KPIInput(BaseModel):
 
 @app.get("/")
 def home():
-    return FileResponse("index.html")
+    return FileResponse("static/index.html")
 
 
 def score_high_better(value, excellent, good, average):
