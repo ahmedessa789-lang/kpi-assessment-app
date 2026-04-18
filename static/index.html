@@ -319,17 +319,6 @@
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <aside class="sidebar">
-      <div class="brand">Eissa</div>
-      <ul>
-        <li>Neural Dashboard</li>
-        <li>Smart Analysis</li>
-        <li>Predictive View</li>
-        <li>Recommendations</li>
-      </ul>
-    </aside>
 
     <main class="main">
       <div class="topbar">
@@ -671,5 +660,27 @@
       }
     });
   </script>
+<script>
+window.addEventListener("DOMContentLoaded", function () {
+  const container = document.querySelector(".container");
+  const loginPage = document.getElementById("loginPage");
+  const loginBtn = document.getElementById("loginBtn");
+  const msg = document.getElementById("msg");
+
+  container.style.display = "none";
+
+  loginBtn.addEventListener("click", function () {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    if (email === "admin" && password === "1234") {
+      loginPage.style.display = "none";
+      container.style.display = "grid";
+    } else {
+      msg.innerText = "Wrong Login Data";
+    }
+  });
+});
+</script>
 </body>
 </html>
