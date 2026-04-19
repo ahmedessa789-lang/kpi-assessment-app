@@ -73,6 +73,9 @@ class KPIInput(BaseModel):
     out_of_stock_cases: int
     total_sku_requests: int
 
+class LoginInput(BaseModel):
+    username: str
+    password: str
 
 @app.get("/")
 def home():
@@ -261,3 +264,23 @@ def get_company(name: str):
             return item["result"]
 
     return {"error": "Company not found"}
+@app.post("/login")
+def login(data: LoginInput):
+    users = [
+        {"username": "admin", "password": "1234", "role": "Admin", "fullName": "Ahmed Eissa"},
+        {"username": "manager", "password": "1234", "role": "Manager", "fullName": "Operations Manager"},
+        {"username": "employee", "password": "1234", "role": "Employee", "fullName": "Staff User"},
+    ]
+
+    for user in users:
+        if user["username"] == data.username and user["password"] == data.password:
+            return {
+                "success": True,
+                "user": {
+                    "username": user["username"],
+                    "role": user["role"],
+                    "fullName": user["fullName"]
+                }
+            }
+
+    return {"success": False, "message": "Wrong username or password"}
