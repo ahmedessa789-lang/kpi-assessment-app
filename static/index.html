@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Eissa Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -458,9 +459,66 @@
           <p id="inventoryScoreCard" class="purple">0</p>
         </div>
       </div>
+<div class="section">
+  <h2>CEO Executive Summary</h2>
+  <div class="results-grid">
+    <div class="result-card">
+      <h3>Company Health</h3>
+      <div class="score cyan" id="companyHealth">-</div>
+      <div id="companyHealthStatus"></div>
+    </div>
 
+    <div class="result-card">
+      <h3>Best Department</h3>
+      <div class="score green" id="bestDept">-</div>
+    </div>
+
+    <div class="result-card">
+      <h3>Weakest Department</h3>
+      <div class="score red" id="weakDept">-</div>
+    </div>
+
+    <div class="result-card">
+      <h3>Priority Action</h3>
+      <div style="font-size:18px;font-weight:bold;" id="priorityAction">-</div>
+    </div>
+
+    <div class="result-card">
+      <h3>PDF Report</h3>
+      <button type="button" onclick="exportPDF()">Export PDF</button>
+    </div>
+  </div>
+</div>
       <div class="section">
-        <h2>Input Data Matrix</h2>
+  <h2>AI Predictive Engine</h2>
+  <div class="results-grid">
+    <div class="result-card">
+      <h3>Growth Chance</h3>
+      <div class="score green" id="growthChance">0%</div>
+    </div>
+
+    <div class="result-card">
+      <h3>Risk Level</h3>
+      <div class="score red" id="riskLevel">-</div>
+      <div id="riskBadge"></div>
+    </div>
+
+    <div class="result-card">
+      <h3>CEO Alert</h3>
+      <div style="font-size:18px;font-weight:bold;" id="ceoAlert">-</div>
+    </div>
+
+    <div class="result-card">
+      <h3>Best Next Action</h3>
+      <div style="font-size:18px;font-weight:bold;" id="nextAction">-</div>
+    </div>
+
+    <div class="result-card">
+      <h3>Forecast</h3>
+      <div style="font-size:18px;font-weight:bold;" id="forecastLabel">-</div>
+    </div>
+  </div>
+</div>
         <form id="kpiForm">
           <div class="form-grid">
             <div class="input-group"><label>Company Name</label><input type="text" id="company_name" value="My Company" required></div>
@@ -673,21 +731,38 @@
         }
       });
     }
+function animateValue(id, endValue, duration = 1200) {
+    const el = document.getElementById(id);
+    let start = 0;
+    const stepTime = 20;
+    const steps = duration / stepTime;
+    const increment = endValue / steps;
 
+    const counter = setInterval(() => {
+        start += increment;
+
+        if (start >= endValue) {
+            el.textContent = endValue;
+            clearInterval(counter);
+        } else {
+            el.textContent = Math.floor(start);
+        }
+    }, stepTime);
+}
     function renderResult(result) {
       document.getElementById("companyBox").textContent = `Company: ${result.company_name || "-"}`;
 
-      document.getElementById("salesScore").textContent = result.sales.score;
-      document.getElementById("financeScore").textContent = result.finance.score;
-      document.getElementById("operationsScore").textContent = result.operations.score;
-      document.getElementById("inventoryScore").textContent = result.inventory.score;
-      document.getElementById("overallScore").textContent = result.overall.score;
+     animateValue("salesScore", result.sales.score);
+     animateValue("financeScore", result.finance.score);
+     animateValue("operationsScore", result.operations.score);
+     animateValue("inventoryScore", result.inventory.score);
+     animateValue("overallScore", result.overall.score);
 
-      document.getElementById("overallScoreCard").textContent = result.overall.score;
-      document.getElementById("salesScoreCard").textContent = result.sales.score;
-      document.getElementById("financeScoreCard").textContent = result.finance.score;
-      document.getElementById("operationsScoreCard").textContent = result.operations.score;
-      document.getElementById("inventoryScoreCard").textContent = result.inventory.score;
+     animateValue("overallScoreCard", result.overall.score);
+     animateValue("salesScoreCard", result.sales.score);
+     animateValue("financeScoreCard", result.finance.score);
+     animateValue("operationsScoreCard", result.operations.score);
+     animateValue("inventoryScoreCard", result.inventory.score);
 
       document.getElementById("salesStatus").innerHTML = `<span class="${badgeClass(result.sales.color)}">${result.sales.status}</span>`;
       document.getElementById("financeStatus").innerHTML = `<span class="${badgeClass(result.finance.color)}">${result.finance.status}</span>`;
@@ -709,6 +784,8 @@
       }
 
       renderCharts(result);
+      renderExecutiveSummary(result);
+      renderPredictiveInsights(result);
     }
 
     document.getElementById("kpiForm").addEventListener("submit", async function(e) {
@@ -771,6 +848,7 @@
       const username = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const msg = document.getElementById("msg");
+      localStorage.setItem("loggedInUser","yes");
 
       try {
         const response = await fetch("/login", {
@@ -827,17 +905,167 @@
       localStorage.removeItem("role");
       location.reload();
     }
+function getHealthLabel(score) {
+  if (score >= 85) return { label: "Excellent", cls: "status-badge status-green" };
+  if (score >= 60) return { label: "Stable", cls: "status-badge status-yellow" };
+  return { label: "Critical", cls: "status-badge status-red" };
+}
 
-    window.onload = function () {
-      if (localStorage.getItem("login") === "yes") {
-        document.getElementById("loginPage").style.display = "none";
-        document.querySelector(".container").style.display = "grid";
-        showLogout();
-      } else {
-        document.getElementById("loginPage").style.display = "flex";
-        document.querySelector(".container").style.display = "none";
-      }
-    };
+function renderExecutiveSummary(result) {
+  const departments = [
+    { name: "Sales", score: result.sales.score },
+    { name: "Finance", score: result.finance.score },
+    { name: "Operations", score: result.operations.score },
+    { name: "Inventory", score: result.inventory.score }
+  ];
+
+  const best = [...departments].sort((a, b) => b.score - a.score)[0];
+  const weak = [...departments].sort((a, b) => a.score - b.score)[0];
+  const health = getHealthLabel(result.overall.score);
+
+  document.getElementById("companyHealth").innerText = health.label;
+  document.getElementById("companyHealthStatus").innerHTML =
+    `<span class="${health.cls}">${result.overall.score}</span>`;
+
+  document.getElementById("bestDept").innerText = `${best.name} (${best.score})`;
+  document.getElementById("weakDept").innerText = `${weak.name} (${weak.score})`;
+  document.getElementById("priorityAction").innerText = `Improve ${weak.name}`;
+}
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const company =
+        document.getElementById("companyBox")?.innerText || "Company";
+
+    const overall =
+        document.getElementById("overallScore")?.innerText || "0";
+
+    const sales =
+        document.getElementById("salesScore")?.innerText || "0";
+
+    const finance =
+        document.getElementById("financeScore")?.innerText || "0";
+
+    const operations =
+        document.getElementById("operationsScore")?.innerText || "0";
+
+    const inventory =
+        document.getElementById("inventoryScore")?.innerText || "0";
+
+    const health =
+        document.getElementById("companyHealth")?.innerText || "-";
+
+    const growth =
+        document.getElementById("growthChance")?.innerText || "0%";
+
+    const risk =
+        document.getElementById("riskLevel")?.innerText || "-";
+
+    const alertMsg =
+        document.getElementById("ceoAlert")?.innerText || "-";
+
+    const nextAction =
+        document.getElementById("nextAction")?.innerText || "-";
+
+    doc.setFontSize(20);
+    doc.text("Eissa Executive KPI Report", 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(company, 20, 32);
+
+    doc.line(20, 36, 190, 36);
+
+    doc.text("Performance Scores", 20, 48);
+    doc.text("Overall Score: " + overall, 25, 58);
+    doc.text("Sales Score: " + sales, 25, 66);
+    doc.text("Finance Score: " + finance, 25, 74);
+    doc.text("Operations Score: " + operations, 25, 82);
+    doc.text("Inventory Score: " + inventory, 25, 90);
+
+    doc.line(20, 96, 190, 96);
+
+    doc.text("Executive Insights", 20, 108);
+    doc.text("Company Health: " + health, 25, 118);
+    doc.text("Growth Chance: " + growth, 25, 126);
+    doc.text("Risk Level: " + risk, 25, 134);
+
+    doc.line(20, 140, 190, 140);
+
+    doc.text("CEO Notes", 20, 152);
+    doc.text("CEO Alert: " + alertMsg, 25, 162);
+    doc.text("Next Action: " + nextAction, 25, 170);
+
+    let y = 184;
+
+    const recItems = document.querySelectorAll("#recommendationsList li");
+
+    if (recItems.length > 0) {
+        doc.text("Recommendations", 20, y);
+        y += 10;
+
+        recItems.forEach((item) => {
+            doc.text("- " + item.innerText, 25, y);
+            y += 8;
+        });
+    }
+
+    doc.save("Eissa_Executive_Report.pdf");
+}
+
+
+function renderPredictiveInsights(result) {
+    const overall = result.overall.score;
+    const weakest = [
+        { name: "Sales", score: result.sales.score },
+        { name: "Finance", score: result.finance.score },
+        { name: "Operations", score: result.operations.score },
+        { name: "Inventory", score: result.inventory.score }
+    ].sort((a, b) => a.score - b.score)[0];
+
+    let growthChance = Math.min(100, Math.max(5, overall + 8));
+    let riskLabel = "";
+    let riskClass = "";
+    let ceoAlert = "";
+    let forecast = "";
+
+    if (overall >= 85) {
+        riskLabel = "Low";
+        riskClass = "status-badge status-green";
+        ceoAlert = "Strong performance, expand strategically.";
+        forecast = "Expansion Opportunity";
+    } else if (overall >= 60) {
+        riskLabel = "Medium";
+        riskClass = "status-badge status-yellow";
+        ceoAlert = `Watch ${weakest.name} closely.`;
+        forecast = "Stable with Caution";
+    } else {
+        riskLabel = "High";
+        riskClass = "status-badge status-red";
+        ceoAlert = `Immediate intervention needed in ${weakest.name}.`;
+        forecast = "Critical Recovery Mode";
+    }
+
+    document.getElementById("growthChance").innerText = growthChance + "%";
+    document.getElementById("riskLevel").innerText = riskLabel;
+    document.getElementById("riskBadge").innerHTML = `<span class="${riskClass}">${riskLabel} Risk</span>`;
+    document.getElementById("ceoAlert").innerText = ceoAlert;
+    document.getElementById("nextAction").innerText = `Improve ${weakest.name} first`;
+    document.getElementById("forecastLabel").innerText = forecast;
+}window.onload = function () {
+
+const savedUser = localStorage.getItem("loggedInUser");
+
+if (savedUser) {
+    document.getElementById("loginPage").style.display = "none";
+    document.querySelector(".container").style.display = "grid";
+    showLogout();
+} else {
+    document.getElementById("loginPage").style.display = "flex";
+    document.querySelector(".container").style.display = "none";
+}
+
+};
   </script>
 </body>
 </html>
