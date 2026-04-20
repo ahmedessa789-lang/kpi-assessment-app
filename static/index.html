@@ -1,1071 +1,734 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eissa Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eissa KPI Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    body {
-      background:
-        radial-gradient(circle at top left, rgba(0,255,255,0.12), transparent 25%),
-        radial-gradient(circle at top right, rgba(168,85,247,0.12), transparent 25%),
-        linear-gradient(135deg, #050816, #0b1120 45%, #0f172a 100%);
-      color: #e5f3ff;
-      min-height: 100vh;
-    }
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
 
-    .container {
-      display: none;
-      grid-template-columns: 250px 1fr;
-      min-height: 100vh;
-    }
+body{
+background:linear-gradient(135deg,#050816,#0f172a);
+color:white;
+min-height:100vh;
+}
 
-    .sidebar {
-      background: rgba(8, 15, 35, 0.82);
-      border-right: 1px solid rgba(0,255,255,0.12);
-      backdrop-filter: blur(14px);
-      padding: 28px 20px;
-    }
+.container{
+display:none;
+grid-template-columns:250px 1fr;
+min-height:100vh;
+}
 
-    .brand {
-      font-size: 28px;
-      font-weight: bold;
-      color: #67e8f9;
-      margin-bottom: 30px;
-      text-shadow: 0 0 14px rgba(103,232,249,0.35);
-    }
+.sidebar{
+background:#081323;
+padding:25px;
+border-right:1px solid rgba(255,255,255,.08);
+}
 
-    .sidebar ul {
-      list-style: none;
-    }
+.brand{
+font-size:28px;
+font-weight:bold;
+color:#22d3ee;
+margin-bottom:30px;
+}
 
-    .sidebar li {
-      padding: 14px 16px;
-      margin-bottom: 12px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.03);
-      color: #cbd5e1;
-      border: 1px solid rgba(255,255,255,0.04);
-      transition: 0.25s;
-    }
+.sidebar ul{
+list-style:none;
+}
 
-    .sidebar li:hover {
-      transform: translateX(4px);
-      border-color: rgba(0,255,255,0.25);
-      box-shadow: 0 0 18px rgba(0,255,255,0.08);
-      color: #fff;
-    }
+.sidebar li{
+padding:14px;
+margin-bottom:10px;
+background:#111c30;
+border-radius:10px;
+}
 
-    .main {
-      padding: 28px;
-    }
+.main{
+padding:25px;
+}
 
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding: 20px 24px;
-      border-radius: 20px;
-      background: rgba(10,18,35,0.72);
-      border: 1px solid rgba(0,255,255,0.08);
-      backdrop-filter: blur(14px);
-      box-shadow: 0 0 24px rgba(0,0,0,0.18);
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#111c30;
+padding:20px;
+border-radius:16px;
+margin-bottom:20px;
+}
 
-    .topbar h1 {
-      font-size: 30px;
-      color: #e0f2fe;
-    }
+.live{
+background:#163f2b;
+color:#4ade80;
+padding:10px 15px;
+border-radius:30px;
+font-weight:bold;
+}
 
-    .topbar p {
-      color: #93c5fd;
-      font-size: 14px;
-      margin-top: 6px;
-    }
+.cards{
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:15px;
+margin-bottom:20px;
+}
 
-    .live-badge {
-      padding: 10px 16px;
-      border-radius: 999px;
-      background: rgba(34,197,94,0.12);
-      color: #4ade80;
-      font-weight: bold;
-      border: 1px solid rgba(34,197,94,0.18);
-      box-shadow: 0 0 18px rgba(34,197,94,0.10);
-    }
+.card{
+background:#111c30;
+padding:20px;
+border-radius:16px;
+}
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 18px;
-      margin-bottom: 24px;
-    }
+.card h3{
+font-size:13px;
+color:#94a3b8;
+margin-bottom:10px;
+}
 
-    .card {
-      padding: 22px;
-      border-radius: 20px;
-      background: rgba(10,18,35,0.72);
-      border: 1px solid rgba(255,255,255,0.05);
-      backdrop-filter: blur(14px);
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.02) inset,
-        0 14px 30px rgba(0,0,0,0.22);
-    }
+.card p{
+font-size:30px;
+font-weight:bold;
+}
 
-    .card h3 {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 12px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
+.section{
+background:#111c30;
+padding:25px;
+border-radius:16px;
+margin-bottom:20px;
+}
 
-    .card p {
-      font-size: 32px;
-      font-weight: bold;
-    }
+.section h2{
+margin-bottom:18px;
+}
 
-    .cyan { color: #22d3ee; text-shadow: 0 0 14px rgba(34,211,238,0.22); }
-    .green { color: #4ade80; text-shadow: 0 0 14px rgba(74,222,128,0.22); }
-    .yellow { color: #facc15; text-shadow: 0 0 14px rgba(250,204,21,0.22); }
-    .red { color: #fb7185; text-shadow: 0 0 14px rgba(251,113,133,0.22); }
-    .purple { color: #c084fc; text-shadow: 0 0 14px rgba(192,132,252,0.22); }
+.form-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:12px;
+}
 
-    .section {
-      background: rgba(10,18,35,0.72);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 20px;
-      padding: 24px;
-      margin-bottom: 24px;
-      backdrop-filter: blur(14px);
-      box-shadow: 0 14px 30px rgba(0,0,0,0.20);
-    }
+input,button{
+padding:12px;
+border:none;
+border-radius:10px;
+font-size:14px;
+}
 
-    .section h2 {
-      font-size: 21px;
-      margin-bottom: 18px;
-      color: #dbeafe;
-    }
+input{
+background:#061525;
+color:white;
+}
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-    }
+button{
+background:#22d3ee;
+color:black;
+font-weight:bold;
+cursor:pointer;
+}
 
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+#loginPage{
+position:fixed;
+inset:0;
+background:#071120;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
 
-    .input-group label {
-      font-size: 12px;
-      color: #93c5fd;
-      letter-spacing: 0.3px;
-    }
+.login-box{
+background:#0d1b2a;
+padding:40px;
+width:340px;
+border-radius:15px;
+}
 
-    input, button {
-      padding: 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.06);
-      font-size: 14px;
-    }
+.login-box h2{
+text-align:center;
+color:#22d3ee;
+margin-bottom:20px;
+}
 
-    input {
-      background: rgba(4,10,25,0.75);
-      color: #fff;
-      outline: none;
-    }
+.login-box input{
+width:100%;
+margin-bottom:15px;
+}
 
-    input:focus {
-      border-color: rgba(34,211,238,0.45);
-      box-shadow: 0 0 0 3px rgba(34,211,238,0.10);
-    }
+#msg{
+color:#ff6b6b;
+text-align:center;
+margin-top:10px;
+min-height:20px;
+}
 
-    .button-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 18px;
-      flex-wrap: wrap;
-    }
+#logoutBtn{
+background:#ff4d6d;
+color:white;
+padding:10px 16px;
+border-radius:10px;
+}
 
-    button {
-      cursor: pointer;
-      font-weight: bold;
-      color: white;
-      background: linear-gradient(90deg, #06b6d4, #8b5cf6);
-      border: none;
-      box-shadow: 0 8px 22px rgba(6,182,212,0.22);
-    }
-
-    .secondary-btn {
-      background: linear-gradient(90deg, #334155, #475569);
-      box-shadow: none;
-    }
-
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 18px;
-      margin-top: 16px;
-    }
-
-    .result-card {
-      background: rgba(4,10,25,0.70);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 18px;
-      padding: 18px;
-    }
-
-    .result-card h3 {
-      color: #94a3b8;
-      margin-bottom: 10px;
-      font-size: 15px;
-    }
-
-    .result-card .score {
-      font-size: 32px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: bold;
-      border: 1px solid transparent;
-    }
-
-    .status-green {
-      background: rgba(34,197,94,0.12);
-      color: #4ade80;
-      border-color: rgba(34,197,94,0.15);
-    }
-
-    .status-yellow {
-      background: rgba(250,204,21,0.12);
-      color: #facc15;
-      border-color: rgba(250,204,21,0.15);
-    }
-
-    .status-red {
-      background: rgba(251,113,133,0.12);
-      color: #fb7185;
-      border-color: rgba(251,113,133,0.15);
-    }
-
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .chart-box {
-      height: 360px;
-      background: rgba(4,10,25,0.70);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 18px;
-      padding: 18px;
-    }
-
-    .company-box {
-      font-size: 19px;
-      color: #67e8f9;
-      margin-bottom: 16px;
-      font-weight: bold;
-      text-shadow: 0 0 10px rgba(103,232,249,0.20);
-    }
-
-    .recommendations-list {
-      padding-left: 18px;
-      line-height: 1.9;
-      color: #dbeafe;
-    }
-
-    .recommendations-list li {
-      margin-bottom: 8px;
-    }
-
-    #loginPage {
-      position: fixed;
-      inset: 0;
-      background: #071120;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 99999;
-    }
-
-    .login-box {
-      background: #0d1b2a;
-      padding: 40px;
-      border-radius: 15px;
-      width: 350px;
-      box-shadow: 0 0 20px rgba(0,255,255,.2);
-    }
-
-    .login-box h2 {
-      color: #00ffff;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .login-box input {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      box-sizing: border-box;
-      margin-bottom: 15px;
-      background: #061525;
-      color: white;
-    }
-
-    .login-box button {
-      width: 100%;
-      padding: 12px;
-      background: #00ffff;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      color: black;
-      cursor: pointer;
-      box-shadow: none;
-    }
-
-    #msg {
-      color: #ff6b6b;
-      text-align: center;
-      margin-top: 10px;
-      min-height: 20px;
-    }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-left: auto;
-    }
-
-    .user-chip {
-      text-align: right;
-      color: #e2e8f0;
-      font-size: 14px;
-    }
-
-    .user-chip .role {
-      color: #93c5fd;
-      font-size: 12px;
-    }
-
-    .logout-btn {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 10px;
-      background: #ff4d6d;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: none;
-    }
-
-    @media (max-width: 1300px) {
-      .cards, .results-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .form-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 900px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-      .charts-grid,
-      .cards,
-      .results-grid,
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+@media(max-width:1000px){
+.container{grid-template-columns:1fr;}
+.cards,.form-grid{grid-template-columns:1fr;}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
+
 <body>
 
-  <div id="loginPage">
-    <div class="login-box">
-      <h2>EISSA LOGIN</h2>
-      <input type="text" id="email" placeholder="Username">
-      <input type="password" id="password" placeholder="Password">
-      <button id="loginBtn" onclick="login()">LOGIN</button>
-      <p id="msg"></p>
-    </div>
-  </div>
+<div id="loginPage">
+<div class="login-box">
+<h2>EISSA LOGIN</h2>
 
-  <div class="container">
-    <aside class="sidebar">
-      <div class="brand">Eissa</div>
-      <ul>
-        <li>Neural Dashboard</li>
-        <li>Smart Analysis</li>
-        <li>Predictive View</li>
-        <li>Recommendations</li>
-      </ul>
-    </aside>
+<input type="text" id="email" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
 
-    <main class="main">
-      <div class="topbar">
-        <div>
-          <h1>Eissa Business Dashboard</h1>
-          <p>Smart scoring for Sales, Finance, Operations, and Inventory</p>
-        </div>
-        <div class="live-badge">● LIVE SYSTEM</div>
-      </div>
+<button onclick="login()">LOGIN</button>
 
-      <div class="cards">
-        <div class="card">
-          <h3>Overall Score</h3>
-          <p id="overallScoreCard" class="cyan">0</p>
-        </div>
-        <div class="card">
-          <h3>Sales Score</h3>
-          <p id="salesScoreCard" class="green">0</p>
-        </div>
-        <div class="card">
-          <h3>Finance Score</h3>
-          <p id="financeScoreCard" class="yellow">0</p>
-        </div>
-        <div class="card">
-          <h3>Operations Score</h3>
-          <p id="operationsScoreCard" class="red">0</p>
-        </div>
-        <div class="card">
-          <h3>Inventory Score</h3>
-          <p id="inventoryScoreCard" class="purple">0</p>
-        </div>
-      </div>
+<p id="msg"></p>
+</div>
+</div>
+
+<div class="container">
+
+<aside class="sidebar">
+<div class="brand">Eissa</div>
+<ul>
+<li>CEO Dashboard</li>
+<li>AI Analysis</li>
+<li>Reports</li>
+<li>Settings</li>
+</ul>
+</aside>
+
+<main class="main">
+
+<div class="topbar">
+<div>
+<h1>Eissa KPI Dashboard</h1>
+<p style="color:#93c5fd;margin-top:6px;">Business Intelligence System</p>
+</div>
+
+<div id="topRight">
+<div class="live">● LIVE</div>
+</div>
+</div>
+
+<div class="cards">
+<div class="card"><h3>Overall</h3><p id="overallScore">0</p></div>
+<div class="card"><h3>Sales</h3><p id="salesScore">0</p></div>
+<div class="card"><h3>Finance</h3><p id="financeScore">0</p></div>
+<div class="card"><h3>Operations</h3><p id="operationsScore">0</p></div>
+<div class="card"><h3>Inventory</h3><p id="inventoryScore">0</p></div>
+</div>
+
 <div class="section">
-  <h2>CEO Executive Summary</h2>
-  <div class="results-grid">
-    <div class="result-card">
-      <h3>Company Health</h3>
-      <div class="score cyan" id="companyHealth">-</div>
-      <div id="companyHealthStatus"></div>
-    </div>
+<h2>Input Data</h2>
+<div class="section">
+<h2>Financial Statements</h2>
 
-    <div class="result-card">
-      <h3>Best Department</h3>
-      <div class="score green" id="bestDept">-</div>
-    </div>
+<div class="form-grid">
 
-    <div class="result-card">
-      <h3>Weakest Department</h3>
-      <div class="score red" id="weakDept">-</div>
-    </div>
+<input type="number" id="fs_revenue" placeholder="Revenue">
+<input type="number" id="fs_cogs" placeholder="COGS">
+<input type="number" id="fs_operating_expenses" placeholder="Operating Expenses">
+<input type="number" id="fs_other_expenses" placeholder="Other Expenses">
 
-    <div class="result-card">
-      <h3>Priority Action</h3>
-      <div style="font-size:18px;font-weight:bold;" id="priorityAction">-</div>
-    </div>
+<input type="number" id="fs_current_assets" placeholder="Current Assets">
+<input type="number" id="fs_fixed_assets" placeholder="Fixed Assets">
+<input type="number" id="fs_current_liabilities" placeholder="Current Liabilities">
+<input type="number" id="fs_long_term_liabilities" placeholder="Long-term Liabilities">
 
-    <div class="result-card">
-      <h3>PDF Report</h3>
-      <button type="button" onclick="exportPDF()">Export PDF</button>
-    </div>
-  </div>
+<input type="number" id="fs_cash_in" placeholder="Cash In">
+<input type="number" id="fs_cash_out" placeholder="Cash Out">
+<input type="number" id="fs_investing_cash_flow" placeholder="Investing Cash Flow">
+<input type="number" id="fs_financing_cash_flow" placeholder="Financing Cash Flow">
+
 </div>
-      <div class="section">
-  <h2>AI Predictive Engine</h2>
-  <div class="results-grid">
-    <div class="result-card">
-      <h3>Growth Chance</h3>
-      <div class="score green" id="growthChance">0%</div>
-    </div>
 
-    <div class="result-card">
-      <h3>Risk Level</h3>
-      <div class="score red" id="riskLevel">-</div>
-      <div id="riskBadge"></div>
-    </div>
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+<button type="button" onclick="calculateFinancials()">Calculate Financial Statements</button>
 
-    <div class="result-card">
-      <h3>CEO Alert</h3>
-      <div style="font-size:18px;font-weight:bold;" id="ceoAlert">-</div>
-    </div>
+<input type="file" id="excelFile" accept=".xlsx,.xls" style="background:#061525;color:white;padding:10px;border-radius:10px;">
 
-    <div class="result-card">
-      <h3>Best Next Action</h3>
-      <div style="font-size:18px;font-weight:bold;" id="nextAction">-</div>
-    </div>
-
-    <div class="result-card">
-      <h3>Forecast</h3>
-      <div style="font-size:18px;font-weight:bold;" id="forecastLabel">-</div>
-    </div>
-  </div>
+<button type="button" onclick="importExcel()">Import Excel</button>
+<button onclick="exportExcel()">Export Excel</button>
 </div>
-        <form id="kpiForm">
-          <div class="form-grid">
-            <div class="input-group"><label>Company Name</label><input type="text" id="company_name" value="My Company" required></div>
-            <div class="input-group"><label>Current Revenue</label><input type="number" id="current_revenue" required></div>
-            <div class="input-group"><label>Previous Revenue</label><input type="number" id="previous_revenue" required></div>
-            <div class="input-group"><label>Leads Count</label><input type="number" id="leads_count" required></div>
+</div>
 
-            <div class="input-group"><label>Converted Customers</label><input type="number" id="converted_customers" required></div>
-            <div class="input-group"><label>Orders Count</label><input type="number" id="orders_count" required></div>
-            <div class="input-group"><label>Sales Target</label><input type="number" id="sales_target" required></div>
-            <div class="input-group"><label>Revenue</label><input type="number" id="revenue" required></div>
+<div class="section">
+<h2>Financial Results</h2>
 
-            <div class="input-group"><label>COGS</label><input type="number" id="cogs" required></div>
-            <div class="input-group"><label>Total Expenses</label><input type="number" id="total_expenses" required></div>
-            <div class="input-group"><label>Accounts Receivable</label><input type="number" id="accounts_receivable" required></div>
-            <div class="input-group"><label>Average Daily Sales</label><input type="number" id="average_daily_sales" required></div>
+<div class="cards">
+<div class="card"><h3>Gross Profit</h3><p id="grossProfit">0</p></div>
+<div class="card"><h3>Operating Profit</h3><p id="operatingProfit">0</p></div>
+<div class="card"><h3>Net Profit</h3><p id="netProfit">0</p></div>
+<div class="card"><h3>Total Assets</h3><p id="totalAssets">0</p></div>
+<div class="card"><h3>Equity</h3><p id="equity">0</p></div>
+</div>
 
-            <div class="input-group"><label>Cash In</label><input type="number" id="cash_in" required></div>
-            <div class="input-group"><label>Cash Out</label><input type="number" id="cash_out" required></div>
-            <div class="input-group"><label>Total Orders</label><input type="number" id="total_orders" required></div>
-            <div class="input-group"><label>On Time Orders</label><input type="number" id="on_time_orders" required></div>
+<div class="cards">
+<div class="card"><h3>Net Cash Flow</h3><p id="netCashFlow">0</p></div>
+<div class="card"><h3>Current Ratio</h3><p id="currentRatio">0</p></div>
+<div class="card"><h3>Quick Ratio</h3><p id="quickRatio">0</p></div>
+<div class="card"><h3>Debt to Equity</h3><p id="debtToEquity">0</p></div>
+<div class="card"><h3>ROA</h3><p id="roa">0%</p></div>
+</div>
+</div>
 
-            <div class="input-group"><label>Completed Orders</label><input type="number" id="completed_orders" required></div>
-            <div class="input-group"><label>Error Cases</label><input type="number" id="error_cases" required></div>
-            <div class="input-group"><label>Average Inventory</label><input type="number" id="average_inventory" required></div>
-            <div class="input-group"><label>Accurate Count Items</label><input type="number" id="accurate_count_items" required></div>
+<form id="kpiForm">
+<div class="form-grid">
 
-            <div class="input-group"><label>Total Counted Items</label><input type="number" id="total_counted_items" required></div>
-            <div class="input-group"><label>Out of Stock Cases</label><input type="number" id="out_of_stock_cases" required></div>
-            <div class="input-group"><label>Total SKU Requests</label><input type="number" id="total_sku_requests" required></div>
-          </div>
+<input type="text" id="company_name" placeholder="Company Name" value="My Company">
 
-          <div class="button-row">
-            <button type="submit">Run AI Analysis</button>
-            <button type="button" class="secondary-btn" id="saveBtn">Save Snapshot</button>
-          </div>
-        </form>
-      </div>
+<input type="number" id="current_revenue" placeholder="Current Revenue">
+<input type="number" id="previous_revenue" placeholder="Previous Revenue">
+<input type="number" id="leads_count" placeholder="Leads Count">
+<input type="number" id="converted_customers" placeholder="Converted Customers">
 
-      <div class="section">
-        <h2>AI Score Results</h2>
-        <div class="company-box" id="companyBox">Company: -</div>
-        <div class="results-grid">
-          <div class="result-card">
-            <h3>Sales</h3>
-            <div class="score green" id="salesScore">0</div>
-            <div id="salesStatus"></div>
-          </div>
-          <div class="result-card">
-            <h3>Finance</h3>
-            <div class="score yellow" id="financeScore">0</div>
-            <div id="financeStatus"></div>
-          </div>
-          <div class="result-card">
-            <h3>Operations</h3>
-            <div class="score red" id="operationsScore">0</div>
-            <div id="operationsStatus"></div>
-          </div>
-          <div class="result-card">
-            <h3>Inventory</h3>
-            <div class="score purple" id="inventoryScore">0</div>
-            <div id="inventoryStatus"></div>
-          </div>
-          <div class="result-card">
-            <h3>Overall</h3>
-            <div class="score cyan" id="overallScore">0</div>
-            <div id="overallStatus"></div>
-          </div>
-        </div>
-      </div>
+<input type="number" id="orders_count" placeholder="Orders Count">
+<input type="number" id="sales_target" placeholder="Sales Target">
+<input type="number" id="revenue" placeholder="Revenue">
+<input type="number" id="cogs" placeholder="COGS">
 
-      <div class="section">
-        <h2>Visualization Engine</h2>
-        <div class="charts-grid">
-          <div class="chart-box">
-            <canvas id="departmentChart"></canvas>
-          </div>
-          <div class="chart-box">
-            <canvas id="kpiChart"></canvas>
-          </div>
-        </div>
-      </div>
+<input type="number" id="total_expenses" placeholder="Expenses">
+<input type="number" id="accounts_receivable" placeholder="Receivable">
+<input type="number" id="average_daily_sales" placeholder="Daily Sales">
+<input type="number" id="cash_in" placeholder="Cash In">
 
-      <div class="section">
-        <h2>AI Recommendations</h2>
-        <ul class="recommendations-list" id="recommendationsList">
-          <li>No recommendations yet.</li>
-        </ul>
-      </div>
-    </main>
-  </div>
+<input type="number" id="cash_out" placeholder="Cash Out">
+<input type="number" id="total_orders" placeholder="Total Orders">
+<input type="number" id="on_time_orders" placeholder="On Time Orders">
+<input type="number" id="completed_orders" placeholder="Completed Orders">
 
-  <script>
-    let lastPayload = null;
-    let departmentChart = null;
-    let kpiChart = null;
+<input type="number" id="error_cases" placeholder="Error Cases">
+<input type="number" id="average_inventory" placeholder="Avg Inventory">
+<input type="number" id="accurate_count_items" placeholder="Accurate Items">
+<input type="number" id="total_counted_items" placeholder="Counted Items">
 
-    function badgeClass(color) {
-      if (color === "green") return "status-badge status-green";
-      if (color === "yellow") return "status-badge status-yellow";
-      return "status-badge status-red";
-    }
+<input type="number" id="out_of_stock_cases" placeholder="Out Of Stock">
+<input type="number" id="total_sku_requests" placeholder="SKU Requests">
 
-    function getNumber(id) {
-      return parseFloat(document.getElementById(id).value) || 0;
-    }
+</div>
 
-    function getInt(id) {
-      return parseInt(document.getElementById(id).value) || 0;
-    }
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+<button type="submit">Run AI Analysis</button>
+<button type="button" onclick="exportPDF()">Export PDF</button>
+</div>
 
-    function collectFormData() {
-      return {
-        company_name: document.getElementById("company_name").value || "My Company",
-        current_revenue: getNumber("current_revenue"),
-        previous_revenue: getNumber("previous_revenue"),
-        leads_count: getInt("leads_count"),
-        converted_customers: getInt("converted_customers"),
-        orders_count: getInt("orders_count"),
-        sales_target: getNumber("sales_target"),
-        revenue: getNumber("revenue"),
-        cogs: getNumber("cogs"),
-        total_expenses: getNumber("total_expenses"),
-        accounts_receivable: getNumber("accounts_receivable"),
-        average_daily_sales: getNumber("average_daily_sales"),
-        cash_in: getNumber("cash_in"),
-        cash_out: getNumber("cash_out"),
-        total_orders: getInt("total_orders"),
-        on_time_orders: getInt("on_time_orders"),
-        completed_orders: getInt("completed_orders"),
-        error_cases: getInt("error_cases"),
-        average_inventory: getNumber("average_inventory"),
-        accurate_count_items: getInt("accurate_count_items"),
-        total_counted_items: getInt("total_counted_items"),
-        out_of_stock_cases: getInt("out_of_stock_cases"),
-        total_sku_requests: getInt("total_sku_requests")
-      };
-    }
+</form>
+</div>
 
-    function renderCharts(result) {
-      const depCtx = document.getElementById("departmentChart").getContext("2d");
-      const kpiCtx = document.getElementById("kpiChart").getContext("2d");
+<div class="section">
+<h2>Chart</h2>
+<canvas id="chart1"></canvas>
+</div>
+<div class="section">
+<h2>Recommendations</h2>
+<ul id="recommendationsList" style="padding-left:20px;line-height:1.9;color:#dbeafe;">
+<li>No recommendations yet.</li>
+</ul>
+</div>
 
-      if (departmentChart) departmentChart.destroy();
-      if (kpiChart) kpiChart.destroy();
+</main>
+</div>
 
-      departmentChart = new Chart(depCtx, {
-        type: "bar",
-        data: {
-          labels: ["Sales", "Finance", "Operations", "Inventory", "Overall"],
-          datasets: [{
-            label: "Score",
-            data: [
-              result.sales.score,
-              result.finance.score,
-              result.operations.score,
-              result.inventory.score,
-              result.overall.score
-            ],
-            backgroundColor: ["#22c55e", "#facc15", "#fb7185", "#c084fc", "#22d3ee"],
-            borderRadius: 10
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              ticks: { color: "#e2e8f0" },
-              grid: { color: "rgba(255,255,255,0.08)" }
-            },
-            x: {
-              ticks: { color: "#e2e8f0" },
-              grid: { color: "rgba(255,255,255,0.05)" }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: { color: "#e2e8f0" }
-            }
-          }
-        }
-      });
+<script>
 
-      kpiChart = new Chart(kpiCtx, {
-        type: "doughnut",
-        data: {
-          labels: ["Sales", "Finance", "Operations", "Inventory"],
-          datasets: [{
-            data: [
-              result.sales.score,
-              result.finance.score,
-              result.operations.score,
-              result.inventory.score
-            ],
-            backgroundColor: ["#22c55e", "#facc15", "#fb7185", "#c084fc"],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: "#e2e8f0" }
-            }
-          }
-        }
-      });
-    }
-function animateValue(id, endValue, duration = 1200) {
-    const el = document.getElementById(id);
-    let start = 0;
-    const stepTime = 20;
-    const steps = duration / stepTime;
-    const increment = endValue / steps;
+function login(){
 
-    const counter = setInterval(() => {
-        start += increment;
+let user=document.getElementById("email").value.trim();
+let pass=document.getElementById("password").value.trim();
 
-        if (start >= endValue) {
-            el.textContent = endValue;
-            clearInterval(counter);
-        } else {
-            el.textContent = Math.floor(start);
-        }
-    }, stepTime);
-}
-    function renderResult(result) {
-      document.getElementById("companyBox").textContent = `Company: ${result.company_name || "-"}`;
+if(user=="admin" && pass=="1234"){
 
-     animateValue("salesScore", result.sales.score);
-     animateValue("financeScore", result.finance.score);
-     animateValue("operationsScore", result.operations.score);
-     animateValue("inventoryScore", result.inventory.score);
-     animateValue("overallScore", result.overall.score);
+document.getElementById("loginPage").style.display="none";
+document.querySelector(".container").style.display="grid";
 
-     animateValue("overallScoreCard", result.overall.score);
-     animateValue("salesScoreCard", result.sales.score);
-     animateValue("financeScoreCard", result.finance.score);
-     animateValue("operationsScoreCard", result.operations.score);
-     animateValue("inventoryScoreCard", result.inventory.score);
+localStorage.setItem("login","yes");
 
-      document.getElementById("salesStatus").innerHTML = `<span class="${badgeClass(result.sales.color)}">${result.sales.status}</span>`;
-      document.getElementById("financeStatus").innerHTML = `<span class="${badgeClass(result.finance.color)}">${result.finance.status}</span>`;
-      document.getElementById("operationsStatus").innerHTML = `<span class="${badgeClass(result.operations.color)}">${result.operations.status}</span>`;
-      document.getElementById("inventoryStatus").innerHTML = `<span class="${badgeClass(result.inventory.color)}">${result.inventory.status}</span>`;
-      document.getElementById("overallStatus").innerHTML = `<span class="${badgeClass(result.overall.color)}">${result.overall.status}</span>`;
+showLogout();
 
-      const recList = document.getElementById("recommendationsList");
-      recList.innerHTML = "";
-
-      if (result.recommendations && result.recommendations.length) {
-        result.recommendations.forEach(rec => {
-          const li = document.createElement("li");
-          li.textContent = rec;
-          recList.appendChild(li);
-        });
-      } else {
-        recList.innerHTML = "<li>No recommendations yet.</li>";
-      }
-
-      renderCharts(result);
-      renderExecutiveSummary(result);
-      renderPredictiveInsights(result);
-    }
-
-    document.getElementById("kpiForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-
-      const payload = collectFormData();
-      lastPayload = payload;
-
-      try {
-        const response = await fetch("/kpi/calculate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          alert("Calculation failed");
-          console.log(result);
-          return;
-        }
-
-        result.company_name = payload.company_name;
-        renderResult(result);
-      } catch (error) {
-        console.error(error);
-        alert("Error while calculating KPI");
-      }
-    });
-
-    document.getElementById("saveBtn").addEventListener("click", async function() {
-      if (!lastPayload) {
-        alert("Please calculate KPI first");
-        return;
-      }
-
-      try {
-        const response = await fetch("/kpi/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(lastPayload)
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          alert(result.message || "Saved successfully");
-        } else {
-          alert("Save failed");
-          console.log(result);
-        }
-      } catch (error) {
-        console.error(error);
-        alert("Error while saving assessment");
-      }
-    });
-
-    async function login() {
-      const username = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const msg = document.getElementById("msg");
-      localStorage.setItem("loggedInUser","yes");
-
-      try {
-        const response = await fetch("/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ username, password })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          localStorage.setItem("login", "yes");
-          localStorage.setItem("user", result.user.fullName || "Ahmed Eissa");
-          localStorage.setItem("role", result.user.role || "Admin");
-
-          document.getElementById("loginPage").style.display = "none";
-          document.querySelector(".container").style.display = "grid";
-          showLogout();
-          msg.innerText = "";
-        } else {
-          msg.innerText = result.message || "Wrong Login Data";
-        }
-      } catch (error) {
-        console.error(error);
-        msg.innerText = "Login error";
-      }
-    }
-
-    function showLogout() {
-      const topbar = document.querySelector(".topbar");
-      if (!topbar) return;
-
-      let old = document.getElementById("topbarUserBox");
-      if (old) old.remove();
-
-      const rightBox = document.createElement("div");
-      rightBox.id = "topbarUserBox";
-      rightBox.className = "topbar-right";
-      rightBox.innerHTML = `
-        <div class="user-chip">
-          <div>${localStorage.getItem("user") || "Ahmed Eissa"}</div>
-          <div class="role">${localStorage.getItem("role") || "Admin"}</div>
-        </div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      `;
-      topbar.appendChild(rightBox);
-    }
-
-    function logout() {
-      localStorage.removeItem("login");
-      localStorage.removeItem("user");
-      localStorage.removeItem("role");
-      location.reload();
-    }
-function getHealthLabel(score) {
-  if (score >= 85) return { label: "Excellent", cls: "status-badge status-green" };
-  if (score >= 60) return { label: "Stable", cls: "status-badge status-yellow" };
-  return { label: "Critical", cls: "status-badge status-red" };
+}else{
+document.getElementById("msg").innerText="Wrong Login Data";
 }
 
-function renderExecutiveSummary(result) {
-  const departments = [
-    { name: "Sales", score: result.sales.score },
-    { name: "Finance", score: result.finance.score },
-    { name: "Operations", score: result.operations.score },
-    { name: "Inventory", score: result.inventory.score }
-  ];
-
-  const best = [...departments].sort((a, b) => b.score - a.score)[0];
-  const weak = [...departments].sort((a, b) => a.score - b.score)[0];
-  const health = getHealthLabel(result.overall.score);
-
-  document.getElementById("companyHealth").innerText = health.label;
-  document.getElementById("companyHealthStatus").innerHTML =
-    `<span class="${health.cls}">${result.overall.score}</span>`;
-
-  document.getElementById("bestDept").innerText = `${best.name} (${best.score})`;
-  document.getElementById("weakDept").innerText = `${weak.name} (${weak.score})`;
-  document.getElementById("priorityAction").innerText = `Improve ${weak.name}`;
-}
-function exportPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    const company =
-        document.getElementById("companyBox")?.innerText || "Company";
-
-    const overall =
-        document.getElementById("overallScore")?.innerText || "0";
-
-    const sales =
-        document.getElementById("salesScore")?.innerText || "0";
-
-    const finance =
-        document.getElementById("financeScore")?.innerText || "0";
-
-    const operations =
-        document.getElementById("operationsScore")?.innerText || "0";
-
-    const inventory =
-        document.getElementById("inventoryScore")?.innerText || "0";
-
-    const health =
-        document.getElementById("companyHealth")?.innerText || "-";
-
-    const growth =
-        document.getElementById("growthChance")?.innerText || "0%";
-
-    const risk =
-        document.getElementById("riskLevel")?.innerText || "-";
-
-    const alertMsg =
-        document.getElementById("ceoAlert")?.innerText || "-";
-
-    const nextAction =
-        document.getElementById("nextAction")?.innerText || "-";
-
-    doc.setFontSize(20);
-    doc.text("Eissa Executive KPI Report", 20, 20);
-
-    doc.setFontSize(12);
-    doc.text(company, 20, 32);
-
-    doc.line(20, 36, 190, 36);
-
-    doc.text("Performance Scores", 20, 48);
-    doc.text("Overall Score: " + overall, 25, 58);
-    doc.text("Sales Score: " + sales, 25, 66);
-    doc.text("Finance Score: " + finance, 25, 74);
-    doc.text("Operations Score: " + operations, 25, 82);
-    doc.text("Inventory Score: " + inventory, 25, 90);
-
-    doc.line(20, 96, 190, 96);
-
-    doc.text("Executive Insights", 20, 108);
-    doc.text("Company Health: " + health, 25, 118);
-    doc.text("Growth Chance: " + growth, 25, 126);
-    doc.text("Risk Level: " + risk, 25, 134);
-
-    doc.line(20, 140, 190, 140);
-
-    doc.text("CEO Notes", 20, 152);
-    doc.text("CEO Alert: " + alertMsg, 25, 162);
-    doc.text("Next Action: " + nextAction, 25, 170);
-
-    let y = 184;
-
-    const recItems = document.querySelectorAll("#recommendationsList li");
-
-    if (recItems.length > 0) {
-        doc.text("Recommendations", 20, y);
-        y += 10;
-
-        recItems.forEach((item) => {
-            doc.text("- " + item.innerText, 25, y);
-            y += 8;
-        });
-    }
-
-    doc.save("Eissa_Executive_Report.pdf");
 }
 
+function showLogout(){
 
-function renderPredictiveInsights(result) {
-    const overall = result.overall.score;
-    const weakest = [
-        { name: "Sales", score: result.sales.score },
-        { name: "Finance", score: result.finance.score },
-        { name: "Operations", score: result.operations.score },
-        { name: "Inventory", score: result.inventory.score }
-    ].sort((a, b) => a.score - b.score)[0];
+document.getElementById("topRight").innerHTML=
+`
+<button id="logoutBtn" onclick="logout()">Logout</button>
+`;
 
-    let growthChance = Math.min(100, Math.max(5, overall + 8));
-    let riskLabel = "";
-    let riskClass = "";
-    let ceoAlert = "";
-    let forecast = "";
-
-    if (overall >= 85) {
-        riskLabel = "Low";
-        riskClass = "status-badge status-green";
-        ceoAlert = "Strong performance, expand strategically.";
-        forecast = "Expansion Opportunity";
-    } else if (overall >= 60) {
-        riskLabel = "Medium";
-        riskClass = "status-badge status-yellow";
-        ceoAlert = `Watch ${weakest.name} closely.`;
-        forecast = "Stable with Caution";
-    } else {
-        riskLabel = "High";
-        riskClass = "status-badge status-red";
-        ceoAlert = `Immediate intervention needed in ${weakest.name}.`;
-        forecast = "Critical Recovery Mode";
-    }
-
-    document.getElementById("growthChance").innerText = growthChance + "%";
-    document.getElementById("riskLevel").innerText = riskLabel;
-    document.getElementById("riskBadge").innerHTML = `<span class="${riskClass}">${riskLabel} Risk</span>`;
-    document.getElementById("ceoAlert").innerText = ceoAlert;
-    document.getElementById("nextAction").innerText = `Improve ${weakest.name} first`;
-    document.getElementById("forecastLabel").innerText = forecast;
-}window.onload = function () {
-
-const savedUser = localStorage.getItem("loggedInUser");
-
-if (savedUser) {
-    document.getElementById("loginPage").style.display = "none";
-    document.querySelector(".container").style.display = "grid";
-    showLogout();
-} else {
-    document.getElementById("loginPage").style.display = "flex";
-    document.querySelector(".container").style.display = "none";
 }
 
+function logout(){
+
+localStorage.removeItem("login");
+location.reload();
+
+}
+
+window.onload=function(){
+
+if(localStorage.getItem("login")=="yes"){
+document.getElementById("loginPage").style.display="none";
+document.querySelector(".container").style.display="grid";
+showLogout();
+}else{
+document.querySelector(".container").style.display="none";
+}
+
+}
+
+function val(id){
+return parseFloat(document.getElementById(id).value)||0;
+}
+
+document.getElementById("kpiForm").onsubmit=async function(e){
+
+e.preventDefault();
+
+let payload={
+company_name:document.getElementById("company_name").value,
+
+current_revenue:val("current_revenue"),
+previous_revenue:val("previous_revenue"),
+leads_count:val("leads_count"),
+converted_customers:val("converted_customers"),
+orders_count:val("orders_count"),
+sales_target:val("sales_target"),
+
+revenue:val("revenue"),
+cogs:val("cogs"),
+total_expenses:val("total_expenses"),
+accounts_receivable:val("accounts_receivable"),
+average_daily_sales:val("average_daily_sales"),
+cash_in:val("cash_in"),
+cash_out:val("cash_out"),
+
+total_orders:val("total_orders"),
+on_time_orders:val("on_time_orders"),
+completed_orders:val("completed_orders"),
+error_cases:val("error_cases"),
+
+average_inventory:val("average_inventory"),
+accurate_count_items:val("accurate_count_items"),
+total_counted_items:val("total_counted_items"),
+out_of_stock_cases:val("out_of_stock_cases"),
+total_sku_requests:val("total_sku_requests")
 };
-  </script>
+
+let response=await fetch("/kpi/calculate",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(payload)
+});
+
+let result=await response.json();
+
+document.getElementById("overallScore").innerText=result.overall.score;
+document.getElementById("salesScore").innerText=result.sales.score;
+document.getElementById("financeScore").innerText=result.finance.score;
+document.getElementById("operationsScore").innerText=result.operations.score;
+document.getElementById("inventoryScore").innerText=result.inventory.score;
+
+drawChart(result);
+renderRecommendations(result);
+
+}
+function renderRecommendations(result){
+let rec = [];
+
+if(result.sales.score < 70){
+rec.push("Improve sales conversion and increase target achievement.");
+}
+
+if(result.finance.score < 70){
+rec.push("Review expenses, receivables, and cash flow control.");
+}
+
+if(result.operations.score < 70){
+rec.push("Improve delivery performance and reduce operational errors.");
+}
+
+if(result.inventory.score < 70){
+rec.push("Increase stock accuracy and reduce out-of-stock cases.");
+}
+
+if(rec.length === 0){
+rec.push("Overall performance is strong. Maintain monitoring and continuous improvement.");
+}
+
+let list = document.getElementById("recommendationsList");
+list.innerHTML = "";
+
+rec.forEach(item=>{
+let li = document.createElement("li");
+li.innerText = item;
+list.appendChild(li);
+});
+}
+let chart;
+
+function drawChart(result){
+
+let ctx=document.getElementById("chart1");
+
+if(chart) chart.destroy();
+
+chart=new Chart(ctx,{
+type:"bar",
+data:{
+labels:["Sales","Finance","Operations","Inventory","Overall"],
+datasets:[{
+label:"Score",
+data:[
+result.sales.score,
+result.finance.score,
+result.operations.score,
+result.inventory.score,
+result.overall.score
+]
+}]
+}
+});
+
+}
+
+function exportPDF(){
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+
+const company = document.getElementById("company_name").value || "My Company";
+const overall = document.getElementById("overallScore").innerText || "0";
+const sales = document.getElementById("salesScore").innerText || "0";
+const finance = document.getElementById("financeScore").innerText || "0";
+const operations = document.getElementById("operationsScore").innerText || "0";
+const inventory = document.getElementById("inventoryScore").innerText || "0";
+const reportDate = new Date().toLocaleString();
+
+doc.setFillColor(8,19,35);
+doc.rect(0,0,210,297,"F");
+
+doc.setTextColor(34,211,238);
+doc.setFontSize(24);
+doc.text("Eissa Executive KPI Report", 20, 22);
+
+doc.setTextColor(220,240,255);
+doc.setFontSize(12);
+doc.text("Prepared by Ahmed Eissa", 20, 32);
+doc.text("Company: " + company, 20, 40);
+doc.text("Date: " + reportDate, 20, 48);
+
+doc.setDrawColor(60,130,180);
+doc.line(20, 55, 190, 55);
+
+doc.setFillColor(17,28,48);
+doc.roundedRect(20, 64, 170, 52, 4, 4, "F");
+
+doc.setTextColor(255,255,255);
+doc.setFontSize(16);
+doc.text("Performance Summary", 26, 76);
+
+doc.setFontSize(12);
+doc.text("Overall Score: " + overall, 30, 88);
+doc.text("Sales Score: " + sales, 30, 96);
+doc.text("Finance Score: " + finance, 30, 104);
+doc.text("Operations Score: " + operations, 110, 88);
+doc.text("Inventory Score: " + inventory, 110, 96);
+
+doc.setFillColor(17,28,48);
+doc.roundedRect(20, 125, 170, 26, 4, 4, "F");
+doc.setTextColor(34,211,238);
+doc.setFontSize(15);
+doc.text("CEO Insight", 26, 141);
+
+let insight = "Business performance requires continuous monitoring.";
+if(parseFloat(overall) >= 85){
+  insight = "Excellent business health with strong expansion potential.";
+}else if(parseFloat(overall) >= 60){
+  insight = "Stable performance, but some departments need attention.";
+}else{
+  insight = "Critical performance level. Immediate executive action is recommended.";
+}
+
+doc.setTextColor(230,240,255);
+doc.setFontSize(11);
+doc.text(insight, 85, 141, { maxWidth: 95 });
+
+doc.setFillColor(17,28,48);
+doc.roundedRect(20, 160, 170, 90, 4, 4, "F");
+
+doc.setTextColor(34,211,238);
+doc.setFontSize(15);
+doc.text("Recommendations", 26, 174);
+
+doc.setTextColor(255,255,255);
+doc.setFontSize(11);
+
+let y = 186;
+const items = document.querySelectorAll("#recommendationsList li");
+
+if(items.length > 0){
+  items.forEach((li)=>{
+    if(y < 240){
+      doc.text("- " + li.innerText, 30, y, { maxWidth: 150 });
+      y += 12;
+    }
+  });
+}else{
+  doc.text("- No recommendations available.", 30, y);
+}
+
+doc.setDrawColor(80,100,130);
+doc.line(20, 270, 190, 270);
+
+doc.setTextColor(160,180,200);
+doc.setFontSize(10);
+doc.text("Signature: ____________________", 20, 280);
+doc.text("Powered by Eissa KPI Dashboard", 120, 280);
+
+doc.save("Eissa_Premium_Executive_Report.pdf");
+}
+function fval(id){
+return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function calculateFinancials(){
+const revenue = fval("fs_revenue");
+const cogs = fval("fs_cogs");
+const operatingExpenses = fval("fs_operating_expenses");
+const otherExpenses = fval("fs_other_expenses");
+
+const currentAssets = fval("fs_current_assets");
+const fixedAssets = fval("fs_fixed_assets");
+const currentLiabilities = fval("fs_current_liabilities");
+const longTermLiabilities = fval("fs_long_term_liabilities");
+
+const cashIn = fval("fs_cash_in");
+const cashOut = fval("fs_cash_out");
+const investingCashFlow = fval("fs_investing_cash_flow");
+const financingCashFlow = fval("fs_financing_cash_flow");
+
+const grossProfit = revenue - cogs;
+const operatingProfit = grossProfit - operatingExpenses;
+const netProfit = operatingProfit - otherExpenses;
+
+const totalAssets = currentAssets + fixedAssets;
+const totalLiabilities = currentLiabilities + longTermLiabilities;
+const equity = totalAssets - totalLiabilities;
+
+const netCashFlow = cashIn - cashOut + investingCashFlow + financingCashFlow;
+
+const currentRatio = currentLiabilities !== 0 ? (currentAssets / currentLiabilities).toFixed(2) : 0;
+const quickRatio = currentLiabilities !== 0 ? ((currentAssets) / currentLiabilities).toFixed(2) : 0;
+const debtToEquity = equity !== 0 ? (totalLiabilities / equity).toFixed(2) : 0;
+const roa = totalAssets !== 0 ? ((netProfit / totalAssets) * 100).toFixed(2) : 0;
+
+document.getElementById("grossProfit").innerText = grossProfit.toFixed(2);
+document.getElementById("operatingProfit").innerText = operatingProfit.toFixed(2);
+document.getElementById("netProfit").innerText = netProfit.toFixed(2);
+document.getElementById("totalAssets").innerText = totalAssets.toFixed(2);
+document.getElementById("equity").innerText = equity.toFixed(2);
+
+document.getElementById("netCashFlow").innerText = netCashFlow.toFixed(2);
+document.getElementById("currentRatio").innerText = currentRatio;
+document.getElementById("quickRatio").innerText = quickRatio;
+document.getElementById("debtToEquity").innerText = debtToEquity;
+document.getElementById("roa").innerText = roa + "%";
+}
+async function importExcel(){
+const fileInput = document.getElementById("excelFile");
+const file = fileInput.files[0];
+
+if(!file){
+alert("Please select an Excel file first.");
+return;
+}
+
+const formData = new FormData();
+formData.append("file", file);
+
+try{
+const response = await fetch("/import-excel", {
+method: "POST",
+body: formData
+});
+
+const result = await response.json();
+
+if(result.success){
+for (const key in result.data){
+const el = document.getElementById(key);
+if(el){
+el.value = result.data[key];
+}
+}
+alert("Excel imported successfully.");
+}else{
+alert("Import failed.");
+}
+}catch(error){
+console.error(error);
+alert("Error while importing Excel.");
+}
+}
+function exportExcel() {
+
+let wb = XLSX.utils.book_new();
+
+let summary = [
+["Eissa KPI Dashboard"],
+[""],
+["Revenue", document.getElementById("revenue").value],
+["Gross Profit", document.getElementById("grossProfit").innerText],
+["Operating Profit", document.getElementById("operatingProfit").innerText],
+["Net Profit", document.getElementById("netProfit").innerText],
+["Total Assets", document.getElementById("totalAssets").innerText],
+["Equity", document.getElementById("equity").innerText],
+["Current Ratio", document.getElementById("currentRatio").innerText],
+["Debt Ratio", document.getElementById("debtRatio").innerText],
+["Net Margin", document.getElementById("netMargin").innerText]
+];
+
+let ws1 = XLSX.utils.aoa_to_sheet(summary);
+XLSX.utils.book_append_sheet(wb, ws1, "Summary");
+
+let statements = [
+["Income Statement"],
+["Revenue", document.getElementById("revenue").value],
+["COGS", document.getElementById("cogs").value],
+["Operating Expenses", document.getElementById("operatingExpenses").value],
+["Other Expenses", document.getElementById("otherExpenses").value],
+[""],
+["Balance Sheet"],
+["Current Assets", document.getElementById("currentAssets").value],
+["Fixed Assets", document.getElementById("fixedAssets").value],
+["Current Liabilities", document.getElementById("currentLiabilities").value],
+["Long-term Liabilities", document.getElementById("longTermLiabilities").value],
+[""],
+["Cash Flow"],
+["Cash In", document.getElementById("cashIn").value],
+["Cash Out", document.getElementById("cashOut").value]
+];
+
+let ws2 = XLSX.utils.aoa_to_sheet(statements);
+XLSX.utils.book_append_sheet(wb, ws2, "Statements");
+
+XLSX.writeFile(wb, "Eissa_Financial_Report.xlsx");
+}
+</script>
 </body>
 </html>

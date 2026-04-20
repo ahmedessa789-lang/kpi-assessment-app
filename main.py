@@ -1,3 +1,6 @@
+from fastapi import UploadFile, File
+from openpyxl import load_workbook
+from io import BytesIO
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
@@ -284,3 +287,31 @@ def login(data: LoginInput):
             }
 
     return {"success": False, "message": "Wrong username or password"}
+@app.post("/import-excel")
+async def import_excel(file: UploadFile = File(...)):
+    contents = await file.read()
+    workbook = load_workbook(filename=BytesIO(contents), data_only=True)
+    sheet = workbook.active
+
+    headers = [cell.value for cell in sheet[1]]
+    values = [cell.value for cell in sheet[2]]
+
+    data = dict(zip(headers, values))
+
+    return {
+        "success": True,
+        "data": {
+            "fs_revenue": data.get("Revenue", 0) or 0,
+            "fs_cogs": data.get("COGS", 0) or 0,
+            "fs_operating_expenses": data.get("Operating Expenses", 0) or 0,
+            "fs_other_expenses": data.get("Other Expenses", 0) or 0,
+            "fs_current_assets": data.get("Current Assets", 0) or 0,
+            "fs_fixed_assets": data.get("Fixed Assets", 0) or 0,
+            "fs_current_liabilities": data.get("Current Liabilities", 0) or 0,
+            "fs_long_term_liabilities": data.get("Long-term Liabilities", 0) or 0,
+            "fs_cash_in": data.get("Cash In", 0) or 0,
+            "fs_cash_out": data.get("Cash Out", 0) or 0,
+            "fs_investing_cash_flow": data.get("Investing Cash Flow", 0) or 0,
+            "fs_financing_cash_flow": data.get("Financing Cash Flow", 0) or 0,
+        }
+    }
