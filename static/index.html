@@ -687,47 +687,60 @@ alert("Error while importing Excel.");
 }
 function exportExcel() {
 
+function val(id){
+let el = document.getElementById(id);
+return el ? el.value : "";
+}
+
+function txt(id){
+let el = document.getElementById(id);
+return el ? el.innerText : "";
+}
+
 let wb = XLSX.utils.book_new();
 
 let summary = [
 ["Eissa KPI Dashboard"],
 [""],
-["Revenue", document.getElementById("revenue").value],
-["Gross Profit", document.getElementById("grossProfit").innerText],
-["Operating Profit", document.getElementById("operatingProfit").innerText],
-["Net Profit", document.getElementById("netProfit").innerText],
-["Total Assets", document.getElementById("totalAssets").innerText],
-["Equity", document.getElementById("equity").innerText],
-["Current Ratio", document.getElementById("currentRatio").innerText],
-["Debt Ratio", document.getElementById("debtRatio").innerText],
-["Net Margin", document.getElementById("netMargin").innerText]
+["Report Date", new Date().toLocaleString()],
+["Gross Profit", txt("grossProfit")],
+["Operating Profit", txt("operatingProfit")],
+["Net Profit", txt("netProfit")],
+["Total Assets", txt("totalAssets")],
+["Equity", txt("equity")],
+["Current Ratio", txt("currentRatio")],
+["Quick Ratio", txt("quickRatio")],
+["Debt To Equity", txt("debtToEquity")],
+["ROA", txt("roa")]
 ];
 
 let ws1 = XLSX.utils.aoa_to_sheet(summary);
 XLSX.utils.book_append_sheet(wb, ws1, "Summary");
 
-let statements = [
-["Income Statement"],
-["Revenue", document.getElementById("revenue").value],
-["COGS", document.getElementById("cogs").value],
-["Operating Expenses", document.getElementById("operatingExpenses").value],
-["Other Expenses", document.getElementById("otherExpenses").value],
-[""],
-["Balance Sheet"],
-["Current Assets", document.getElementById("currentAssets").value],
-["Fixed Assets", document.getElementById("fixedAssets").value],
-["Current Liabilities", document.getElementById("currentLiabilities").value],
-["Long-term Liabilities", document.getElementById("longTermLiabilities").value],
-[""],
-["Cash Flow"],
-["Cash In", document.getElementById("cashIn").value],
-["Cash Out", document.getElementById("cashOut").value]
+let data = [
+["Financial Statements"],
+
+["Revenue", val("revenue")],
+["COGS", val("cogs")],
+["Operating Expenses", val("operatingExpenses")],
+["Other Expenses", val("otherExpenses")],
+
+["Current Assets", val("currentAssets")],
+["Fixed Assets", val("fixedAssets")],
+["Current Liabilities", val("currentLiabilities")],
+["Long Term Liabilities", val("longTermLiabilities")],
+
+["Cash In", val("cashIn")],
+["Cash Out", val("cashOut")],
+["Investing Cash Flow", val("investingCashFlow")],
+["Financing Cash Flow", val("financingCashFlow")]
 ];
 
-let ws2 = XLSX.utils.aoa_to_sheet(statements);
+let ws2 = XLSX.utils.aoa_to_sheet(data);
 XLSX.utils.book_append_sheet(wb, ws2, "Statements");
 
 XLSX.writeFile(wb, "Eissa_Financial_Report.xlsx");
+
 }
 </script>
 </body>
