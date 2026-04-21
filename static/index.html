@@ -432,7 +432,7 @@ background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(139,92,246,.10));
 </div>
 </div>
 
-<div id="executiveView" class="dashboard-view">
+<div id="financeView" class="dashboard-view hidden-view">
 <div class="section">
 <h2>Financial Statements</h2>
 
@@ -463,6 +463,22 @@ background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(139,92,246,.10));
 <button type="button" onclick="importExcel()">Import Excel</button>
 <button type="button" onclick="exportExcel()">Export Excel</button>
 </div>
+</div>
+<div id="financeDetectionBox" style="display:none; margin-top:20px; padding:18px; border-radius:16px; background:rgba(15,23,42,0.85); color:white; border:1px solid rgba(255,255,255,0.08);">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <h3 style="margin:0;">Detected Finance Mapping</h3>
+        <div id="financeSheetUsed"></div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+        <div style="font-weight:700; margin-bottom:8px;">Columns Found</div>
+        <div id="financeColumnsFound" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <div>
+        <div style="font-weight:700; margin-bottom:8px;">Detected Mapping</div>
+        <div id="financeDetectedColumns" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;"></div>
+    </div>
 </div>
 
 <div class="section">
@@ -606,38 +622,38 @@ function val(id){
 return parseFloat(document.getElementById(id).value)||0;
 }
 
-document.getElementById("kpiForm").onsubmit=async function(e){
+document.getElementById("kpiForm").onsubmit = async function(e){
+    e.preventDefault();
+    alert("Run AI Analysis clicked");
 
-e.preventDefault();
+   let payload = {
+company_name: document.getElementById("company_name").value,
 
-let payload={
-company_name:document.getElementById("company_name").value,
+current_revenue: val("current_revenue"),
+previous_revenue: val("previous_revenue"),
+leads_count: val("leads_count"),
+converted_customers: val("converted_customers"),
+orders_count: val("orders_count"),
+sales_target: val("sales_target"),
 
-current_revenue:val("current_revenue"),
-previous_revenue:val("previous_revenue"),
-leads_count:val("leads_count"),
-converted_customers:val("converted_customers"),
-orders_count:val("orders_count"),
-sales_target:val("sales_target"),
+revenue: val("revenue"),
+cogs: val("cogs"),
+total_expenses: val("total_expenses"),
+accounts_receivable: val("accounts_receivable"),
+average_daily_sales: val("average_daily_sales"),
+cash_in: val("cash_in"),
+cash_out: val("cash_out"),
 
-revenue:val("revenue"),
-cogs:val("cogs"),
-total_expenses:val("total_expenses"),
-accounts_receivable:val("accounts_receivable"),
-average_daily_sales:val("average_daily_sales"),
-cash_in:val("cash_in"),
-cash_out:val("cash_out"),
+total_orders: val("total_orders"),
+on_time_orders: val("on_time_orders"),
+completed_orders: val("completed_orders"),
+error_cases: val("error_cases"),
 
-total_orders:val("total_orders"),
-on_time_orders:val("on_time_orders"),
-completed_orders:val("completed_orders"),
-error_cases:val("error_cases"),
-
-average_inventory:val("average_inventory"),
-accurate_count_items:val("accurate_count_items"),
-total_counted_items:val("total_counted_items"),
-out_of_stock_cases:val("out_of_stock_cases"),
-total_sku_requests:val("total_sku_requests")
+average_inventory: val("average_inventory"),
+accurate_count_items: val("accurate_count_items"),
+total_counted_items: val("total_counted_items"),
+out_of_stock_cases: val("out_of_stock_cases"),
+total_sku_requests: val("total_sku_requests")
 };
 
 let response=await fetch("/kpi/calculate",{
@@ -658,8 +674,34 @@ drawChart(result);
 renderRecommendations(result);
 renderAnalyticsSummary(result);
 syncTable();
-}
 
+}
+function renderRecommendations(result){
+    const list = document.getElementById("recommendationsList");
+    if (!list) return;
+
+    let recs = [];
+
+    if ((result.sales?.score || 0) < 60) {
+        recs.push("Improve sales conversion and revenue growth.");
+    }
+
+    if ((result.finance?.score || 0) < 60) {
+        recs.push("Review financial efficiency and control expenses.");
+    }
+
+    if ((result.operations?.score || 0) < 60) {
+        recs.push("Improve operations efficiency and on-time delivery.");
+    }
+
+    if ((result.inventory?.score || 0) < 60) {
+        recs.push("Improve stock accuracy and reduce out-of-stock cases.");
+    }
+
+    list.innerHTML = recs.length
+        ? recs.map(item => `<li>${item}</li>`).join("")
+        : "<li>No recommendations yet.</li>";
+}
 function renderAnalyticsSummary(result){
 const metrics = [
 {name:"Sales", score: result.sales.score},
@@ -876,43 +918,6 @@ document.getElementById("roa").innerText = roa + "%";
 syncTable();
 }
 
-async function importExcel(){
-const fileInput = document.getElementById("excelFile");
-const file = fileInput.files[0];
-
-if(!file){
-alert("Please select an Excel file first.");
-return;
-}
-
-const formData = new FormData();
-formData.append("file", file);
-
-try{
-const response = await fetch("/import-excel", {
-method: "POST",
-body: formData
-});
-
-const result = await response.json();
-
-if(result.success){
-for (const key in result.data){
-const el = document.getElementById(key);
-if(el){
-el.value = result.data[key];
-}
-}
-alert("Excel imported successfully.");
-}else{
-alert("Import failed.");
-}
-}catch(error){
-console.error(error);
-alert("Error while importing Excel.");
-}
-}
-
 function exportExcel() {
 
 function val(id){
@@ -1025,28 +1030,149 @@ document.getElementById("tblDebtToEquity").innerText=g("debtToEquity");
 document.getElementById("tblRoa").innerText=g("roa");
 }
 
-function renderAnalyticsSummary(result){
-const metrics = [
-{name:"Sales", score: result.sales.score},
-{name:"Finance", score: result.finance.score},
-{name:"Operations", score: result.operations.score},
-{name:"Inventory", score: result.inventory.score}
-];
+async function importExcel() {
+    const fileInput = document.getElementById("excelFile");
 
-metrics.sort((a,b)=>b.score-a.score);
+    if (!fileInput.files.length) {
+        alert("Please select Excel file");
+        return;
+    }
 
-document.getElementById("bestKpi").innerText = metrics[0].name;
-document.getElementById("weakestKpi").innerText = metrics[metrics.length-1].name;
-document.getElementById("priorityMetric").innerText = metrics[metrics.length-1].name;
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
 
-if(result.overall.score >= 85){
-document.getElementById("trendSignal").innerText = "Strong";
-}else if(result.overall.score >= 60){
-document.getElementById("trendSignal").innerText = "Stable";
-}else{
-document.getElementById("trendSignal").innerText = "Critical";
+    try {
+        const response = await fetch("/upload-finance", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            alert(result.message || "Upload failed");
+            return;
+        }
+
+        const data = result.data;
+
+        document.getElementById("financeDetectionBox").style.display = "block";
+
+        function formatFinanceLabel(key) {
+            const labels = {
+                revenue: "Revenue",
+                cogs: "COGS",
+                operating_expenses: "Operating Expenses",
+                other_expenses: "Other Expenses",
+                current_assets: "Current Assets",
+                fixed_assets: "Fixed Assets",
+                current_liabilities: "Current Liabilities",
+                long_term_liabilities: "Long-term Liabilities",
+                cash_in: "Cash In",
+                cash_out: "Cash Out",
+                investing_cash_flow: "Investing Cash Flow",
+                financing_cash_flow: "Financing Cash Flow"
+            };
+            return labels[key] || key;
+        }
+
+        document.getElementById("financeSheetUsed").innerHTML =
+            `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);font-weight:700;color:white;">
+                Sheet: ${data.sheet_used || "N/A"}
+            </span>`;
+
+        const columnsHtml = (data.columns_found_in_sheet || []).map(col => `
+            <span style="
+                display:inline-block;
+                padding:8px 12px;
+                border-radius:999px;
+                background:#0b1220;
+                border:1px solid rgba(255,255,255,0.08);
+                color:#e5e7eb;
+                font-size:14px;">
+                ${col}
+            </span>
+        `).join("");
+
+        document.getElementById("financeColumnsFound").innerHTML = columnsHtml;
+
+        const mappingCards = Object.entries(data.detected_columns || {}).map(([key, value]) => `
+            <div style="
+                background:#0b1220;
+                border:1px solid rgba(255,255,255,0.08);
+                border-radius:14px;
+                padding:12px;">
+                <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Finance Field</div>
+                <div style="font-weight:700;font-size:15px;margin-bottom:10px;">${formatFinanceLabel(key)}</div>
+                <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Matched Excel Column</div>
+                <div style="color:#22d3ee;font-weight:700;">${value}</div>
+            </div>
+        `).join("");
+
+        document.getElementById("financeDetectedColumns").innerHTML =
+            mappingCards || `<div style="color:#cbd5e1;">No mapping detected.</div>`;
+
+        const financeFieldMap = {
+            fs_revenue: data.revenue,
+            fs_cogs: data.cogs,
+            fs_operating_expenses: data.operating_expenses,
+            fs_other_expenses: data.other_expenses,
+            fs_current_assets: data.current_assets,
+            fs_fixed_assets: data.fixed_assets,
+            fs_current_liabilities: data.current_liabilities,
+            fs_long_term_liabilities: data.long_term_liabilities,
+            fs_cash_in: data.cash_in,
+            fs_cash_out: data.cash_out,
+            fs_investing_cash_flow: data.investing_cash_flow,
+            fs_financing_cash_flow: data.financing_cash_flow
+        };
+
+        Object.entries(financeFieldMap).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value ?? "";
+        });
+
+        const requiredFields = [
+            { id: "fs_revenue", name: "Revenue" },
+            { id: "fs_cogs", name: "COGS" },
+            { id: "fs_operating_expenses", name: "Operating Expenses" }
+        ];
+
+        const missingFields = requiredFields.filter(field => {
+            const el = document.getElementById(field.id);
+            const value = el ? el.value.trim() : "";
+            return value === "" || isNaN(Number(value));
+        });
+
+        if (missingFields.length > 0) {
+            alert("Imported successfully, but please review these fields before calculation: " + missingFields.map(f => f.name).join(", "));
+            return;
+        }
+
+        const revenue = Number(document.getElementById("fs_revenue").value || 0);
+        const cogs = Number(document.getElementById("fs_cogs").value || 0);
+        const opex = Number(document.getElementById("fs_operating_expenses").value || 0);
+
+        if (revenue <= 0) {
+            alert("Revenue must be greater than 0 before calculation");
+            return;
+        }
+
+        if (cogs < 0 || opex < 0) {
+            alert("COGS and Operating Expenses cannot be negative");
+            return;
+        }
+
+        calculateFinancials();
+        syncTable();
+        alert("Excel imported successfully. KPIs updated.");
+
+    } catch (error) {
+        console.error(error);
+        alert("Upload failed");
+    }
 }
-}
+
 </script>
 </body>
 </html>

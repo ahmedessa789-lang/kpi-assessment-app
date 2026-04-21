@@ -1,3 +1,11 @@
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import FileResponse
+import os
+import re
+import math
+import shutil
+import pandas as pd
+from typing import Optional, Dict, List, Any
 from fastapi import UploadFile, File
 from openpyxl import load_workbook
 from io import BytesIO
@@ -8,7 +16,207 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
 from datetime import datetime
+FINANCE_KEYWORDS = {
+    "revenue": [
+        "revenue", "sales", "income", "total sales", "net sales", "turnover"
+    ],
+    "cogs": [
+        "cogs", "cost of goods sold", "cost of sales", "direct cost", "cost"
+    ],
+    "operating_expenses": [
+        "operating expenses", "opex", "expenses", "operational expenses"
+    ],
+    "other_expenses": [
+        "other expenses", "non operating expenses", "misc expenses", "additional expenses"
+    ],
+    "current_assets": [
+        "current assets", "cash", "bank", "inventory", "receivables", "accounts receivable"
+    ],
+    "fixed_assets": [
+        "fixed assets", "property", "equipment", "ppe", "non current assets"
+    ],
+    "current_liabilities": [
+        "current liabilities", "payables", "accounts payable", "short term liabilities"
+    ],
+    "long_term_liabilities": [
+        "long term liabilities", "non current liabilities", "loans", "long term debt"
+    ],
+    "cash_in": [
+        "cash in", "cash inflow", "inflow", "receipts", "collections"
+    ],
+    "cash_out": [
+        "cash out", "cash outflow", "outflow", "payments", "disbursements"
+    ],
+    "investing_cash_flow": [
+        "investing cash flow", "investment cash flow", "cash from investing"
+    ],
+    "financing_cash_flow": [
+        "financing cash flow", "cash from financing"
+    ],
+}
 
+
+def normalize_text(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip().lower()
+    text = text.replace("&", " and ")
+    text = text.replace("_", " ")
+    text = text.replace("-", " ")
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def is_number(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return not (isinstance(value, float) and math.isnan(value))
+    try:
+        cleaned = str(value).replace(",", "").replace("EGP", "").replace("$", "").strip()
+        float(cleaned)
+        return True
+    except Exception:
+        return False
+
+
+def to_float(value: Any) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and math.isnan(value):
+            return 0.0
+        return float(value)
+
+    text = str(value).strip()
+    text = text.replace(",", "")
+    text = text.replace("EGP", "")
+    text = text.replace("$", "")
+    text = text.replace("%", "")
+    text = text.strip()
+
+    try:
+        return float(text)
+    except Exception:
+        return 0.0
+
+
+def find_best_sheet(excel_file: pd.ExcelFile) -> str:
+    best_sheet = excel_file.sheet_names[0]
+    best_score = -1
+
+    for sheet_name in excel_file.sheet_names:
+        try:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            score = df.shape[0] * 2 + df.shape[1]
+
+            joined_cols = " ".join([normalize_text(c) for c in df.columns])
+            keyword_hits = 0
+            for words in FINANCE_KEYWORDS.values():
+                for word in words:
+                    if normalize_text(word) in joined_cols:
+                        keyword_hits += 1
+
+            score += keyword_hits * 10
+
+            if score > best_score:
+                best_score = score
+                best_sheet = sheet_name
+        except Exception:
+            continue
+
+    return best_sheet
+
+
+def find_column_by_header(df: pd.DataFrame, keywords: List[str]) -> Optional[str]:
+    normalized_columns = {col: normalize_text(col) for col in df.columns}
+
+    for keyword in keywords:
+        keyword_norm = normalize_text(keyword)
+        for original_col, normalized_col in normalized_columns.items():
+            if keyword_norm == normalized_col:
+                return original_col
+
+    for keyword in keywords:
+        keyword_norm = normalize_text(keyword)
+        for original_col, normalized_col in normalized_columns.items():
+            if keyword_norm in normalized_col:
+                return original_col
+
+    return None
+
+
+def find_label_and_value_rows(df: pd.DataFrame, keywords: List[str]) -> Optional[float]:
+    if df.empty:
+        return None
+
+    for _, row in df.iterrows():
+        row_values = list(row.values)
+        row_texts = [normalize_text(v) for v in row_values]
+
+        for keyword in keywords:
+            keyword_norm = normalize_text(keyword)
+
+            for i, cell_text in enumerate(row_texts):
+                if keyword_norm and keyword_norm in cell_text:
+                    for j, cell_value in enumerate(row_values):
+                        if j != i and is_number(cell_value):
+                            return to_float(cell_value)
+
+    return None
+
+
+def extract_value_from_column(df: pd.DataFrame, column_name: str) -> float:
+    numeric_values = df[column_name].apply(to_float)
+    return float(numeric_values.sum())
+
+
+def detect_finance_data(df: pd.DataFrame) -> Dict[str, Any]:
+    result = {}
+    detected_columns = {}
+
+    for metric, keywords in FINANCE_KEYWORDS.items():
+        matched_col = find_column_by_header(df, keywords)
+        if matched_col:
+            detected_columns[metric] = matched_col
+            result[metric] = extract_value_from_column(df, matched_col)
+        else:
+            result[metric] = None
+
+    for metric, current_value in result.items():
+        if current_value is None:
+            row_value = find_label_and_value_rows(df, FINANCE_KEYWORDS[metric])
+            result[metric] = row_value if row_value is not None else 0.0
+
+    revenue = result.get("revenue", 0.0) or 0.0
+    cogs = result.get("cogs", 0.0) or 0.0
+    operating_expenses = result.get("operating_expenses", 0.0) or 0.0
+    current_assets = result.get("current_assets", 0.0) or 0.0
+    current_liabilities = result.get("current_liabilities", 0.0) or 0.0
+
+    result["gross_profit"] = revenue - cogs
+    result["net_profit_estimate"] = revenue - cogs - operating_expenses
+    result["current_ratio"] = (
+        current_assets / current_liabilities if current_liabilities not in [0, 0.0] else 0
+    )
+
+    result["detected_columns"] = detected_columns
+    return result
+
+
+def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
+    excel_file = pd.ExcelFile(file_path)
+    best_sheet = find_best_sheet(excel_file)
+    df = pd.read_excel(excel_file, sheet_name=best_sheet)
+
+    df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
+
+    finance_data = detect_finance_data(df)
+    finance_data["sheet_used"] = best_sheet
+    finance_data["columns_found_in_sheet"] = [str(col) for col in df.columns]
+
+    return finance_data
 app = FastAPI(
     title="KPI Assessment API",
     version="1.0.0"
@@ -287,31 +495,27 @@ def login(data: LoginInput):
             }
 
     return {"success": False, "message": "Wrong username or password"}
-@app.post("/import-excel")
-async def import_excel(file: UploadFile = File(...)):
-    contents = await file.read()
-    workbook = load_workbook(filename=BytesIO(contents), data_only=True)
-    sheet = workbook.active
+@app.post("/upload-finance")
+async def upload_finance(file: UploadFile = File(...)):
+    upload_dir = "uploads"
+    os.makedirs(upload_dir, exist_ok=True)
 
-    headers = [cell.value for cell in sheet[1]]
-    values = [cell.value for cell in sheet[2]]
+    file_path = os.path.join(upload_dir, file.filename)
 
-    data = dict(zip(headers, values))
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
-    return {
-        "success": True,
-        "data": {
-            "fs_revenue": data.get("Revenue", 0) or 0,
-            "fs_cogs": data.get("COGS", 0) or 0,
-            "fs_operating_expenses": data.get("Operating Expenses", 0) or 0,
-            "fs_other_expenses": data.get("Other Expenses", 0) or 0,
-            "fs_current_assets": data.get("Current Assets", 0) or 0,
-            "fs_fixed_assets": data.get("Fixed Assets", 0) or 0,
-            "fs_current_liabilities": data.get("Current Liabilities", 0) or 0,
-            "fs_long_term_liabilities": data.get("Long-term Liabilities", 0) or 0,
-            "fs_cash_in": data.get("Cash In", 0) or 0,
-            "fs_cash_out": data.get("Cash Out", 0) or 0,
-            "fs_investing_cash_flow": data.get("Investing Cash Flow", 0) or 0,
-            "fs_financing_cash_flow": data.get("Financing Cash Flow", 0) or 0,
+    try:
+        finance_data = read_finance_excel_flexible(file_path)
+
+        return {
+            "success": True,
+            "message": "Finance file processed successfully",
+            "data": finance_data
         }
-    }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error processing finance file: {str(e)}"
+        }
