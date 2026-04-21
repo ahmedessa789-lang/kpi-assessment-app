@@ -16,36 +16,55 @@ box-sizing:border-box;
 font-family:Arial,sans-serif;
 }
 
+:root{
+--bg-1:#07111f;
+--bg-2:#0b1730;
+--bg-3:#111827;
+--panel:#0f172a;
+--panel-2:#111c30;
+--panel-3:#0b1220;
+--border:rgba(148,163,184,.12);
+--text:#f8fafc;
+--muted:#94a3b8;
+--cyan:#22d3ee;
+--cyan-2:#06b6d4;
+--blue:#3b82f6;
+--indigo:#6366f1;
+--success:#4ade80;
+--warning:#facc15;
+--danger:#fb7185;
+}
+
 body{
 background:
-radial-gradient(circle at top left, rgba(34,211,238,0.12), transparent 25%),
-radial-gradient(circle at top right, rgba(168,85,247,0.14), transparent 30%),
-linear-gradient(135deg,#050816 0%,#0b1120 45%,#111827 100%);
-color:#f8fbff;
+radial-gradient(circle at top left, rgba(56,189,248,0.12), transparent 24%),
+radial-gradient(circle at top right, rgba(99,102,241,0.10), transparent 28%),
+linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 45%,var(--bg-3) 100%);
+color:var(--text);
 min-height:100vh;
 }
 
 .container{
 display:none;
-grid-template-columns:250px 1fr;
+grid-template-columns:270px 1fr;
 min-height:100vh;
 }
 
 .sidebar{
-background:rgba(8,19,35,.88);
-padding:25px;
-border-right:1px solid rgba(255,255,255,.08);
-backdrop-filter:blur(12px);
-box-shadow:inset -1px 0 0 rgba(255,255,255,.04);
+background:rgba(7,16,31,.96);
+padding:26px 22px;
+border-right:1px solid var(--border);
+backdrop-filter:blur(14px);
+box-shadow:inset -1px 0 0 rgba(255,255,255,.03);
 }
 
 .brand{
-font-size:30px;
-font-weight:800;
+font-size:34px;
+font-weight:900;
 color:#67e8f9;
-margin-bottom:30px;
-text-shadow:0 0 18px rgba(103,232,249,.35);
-letter-spacing:.5px;
+margin-bottom:28px;
+text-shadow:0 0 16px rgba(103,232,249,.20);
+letter-spacing:.6px;
 }
 
 .sidebar ul{
@@ -53,43 +72,61 @@ list-style:none;
 }
 
 .sidebar li{
-padding:14px 16px;
-margin-bottom:12px;
-background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
-border-radius:14px;
-border:1px solid rgba(255,255,255,.05);
-color:#dbeafe;
+padding:16px 18px;
+margin-bottom:14px;
+background:#0f172a;
+border-radius:16px;
+border:1px solid var(--border);
+color:#e2e8f0;
 transition:.25s ease;
+cursor:pointer;
 }
 
 .sidebar li:hover{
 transform:translateX(4px);
-border-color:rgba(34,211,238,.25);
-box-shadow:0 0 16px rgba(34,211,238,.10);
+border-color:rgba(56,189,248,.30);
+background:#111b31;
+box-shadow:0 0 14px rgba(56,189,248,.08);
+}
+
+.sidebar li.active-side{
+border-color:rgba(56,189,248,.40);
+background:linear-gradient(135deg,rgba(14,165,233,.18),rgba(59,130,246,.10));
+box-shadow:0 0 16px rgba(56,189,248,.10);
 }
 
 .main{
-padding:25px;
+padding:28px;
 }
 
 .topbar{
 display:flex;
 justify-content:space-between;
 align-items:center;
-background:rgba(17,28,48,.78);
-padding:22px;
-border-radius:18px;
-margin-bottom:20px;
-border:1px solid rgba(255,255,255,.05);
+background:rgba(15,23,42,.92);
+padding:26px 28px;
+border-radius:22px;
+margin-bottom:22px;
+border:1px solid var(--border);
 backdrop-filter:blur(14px);
-box-shadow:0 12px 28px rgba(0,0,0,.22);
+box-shadow:0 12px 28px rgba(0,0,0,.18);
 gap:12px;
 flex-wrap:wrap;
 }
 
+.topbar h1{
+font-size:1.05rem;
+}
+
+.topbar p{
+color:#93c5fd;
+margin-top:6px;
+font-size:1.2rem;
+}
+
 .live{
 background:rgba(34,197,94,.12);
-color:#4ade80;
+color:var(--success);
 padding:10px 16px;
 border-radius:30px;
 font-weight:700;
@@ -99,84 +136,97 @@ box-shadow:0 0 18px rgba(34,197,94,.10);
 
 .cards{
 display:grid;
-grid-template-columns:repeat(5,1fr);
-gap:15px;
-margin-bottom:20px;
+grid-template-columns:repeat(5,minmax(0,1fr));
+gap:16px;
+margin-bottom:22px;
 }
 
 .card{
-background:rgba(17,28,48,.78);
-padding:22px;
-border-radius:18px;
-border:1px solid rgba(255,255,255,.05);
-box-shadow:
-0 10px 24px rgba(0,0,0,.22),
-inset 0 1px 0 rgba(255,255,255,.03);
+background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96));
+padding:24px;
+border-radius:20px;
+border:1px solid var(--border);
+box-shadow:0 8px 20px rgba(0,0,0,.18);
 }
 
 .card h3{
-font-size:13px;
-color:#94a3b8;
-margin-bottom:10px;
+font-size:14px;
+color:var(--muted);
+margin-bottom:12px;
+font-weight:700;
 }
 
 .card p{
-font-size:34px;
+font-size:46px;
 font-weight:800;
-color:#e2e8f0;
+color:var(--text);
+line-height:1;
 }
 
+.cards .card:nth-child(1){border-color:rgba(56,189,248,.28);}
+.cards .card:nth-child(2){border-color:rgba(34,197,94,.28);}
+.cards .card:nth-child(3){border-color:rgba(250,204,21,.28);}
+.cards .card:nth-child(4){border-color:rgba(244,114,182,.28);}
+.cards .card:nth-child(5){border-color:rgba(129,140,248,.28);}
+
 .section{
-background:rgba(17,28,48,.78);
-padding:28px;
-border-radius:18px;
-margin-bottom:20px;
-border:1px solid rgba(255,255,255,.05);
-box-shadow:0 12px 28px rgba(0,0,0,.20);
+background:linear-gradient(180deg, rgba(15,23,42,.94), rgba(11,17,32,.94));
+padding:30px;
+border-radius:22px;
+margin-bottom:22px;
+border:1px solid var(--border);
+box-shadow:0 10px 24px rgba(0,0,0,.18);
 }
 
 .section h2{
-margin-bottom:18px;
+margin-bottom:20px;
+color:var(--text);
+font-size:1.15rem;
 }
 
 .form-grid{
 display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:12px;
+grid-template-columns:repeat(4,minmax(0,1fr));
+gap:14px;
 }
 
 input,button{
-padding:12px;
+padding:14px 14px;
 border:none;
-border-radius:10px;
+border-radius:12px;
 font-size:14px;
 }
 
 input{
-background:rgba(6,21,37,.95);
-color:white;
-border:1px solid rgba(255,255,255,.06);
+background:var(--panel-3);
+color:var(--text);
+border:1px solid rgba(148,163,184,.14);
 outline:none;
 transition:.2s ease;
 }
 
+input::placeholder{
+color:var(--muted);
+}
+
 input:focus{
-border-color:rgba(34,211,238,.45);
-box-shadow:0 0 0 3px rgba(34,211,238,.12);
+border-color:rgba(56,189,248,.55);
+box-shadow:0 0 0 3px rgba(56,189,248,.12);
+background:#0f172a;
 }
 
 button{
-background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+background:linear-gradient(90deg,var(--cyan-2),var(--indigo));
 color:white;
 font-weight:700;
 cursor:pointer;
-box-shadow:0 10px 22px rgba(34,211,238,.18);
+box-shadow:0 8px 18px rgba(37,99,235,.18);
 transition:.25s ease;
 }
 
 button:hover{
 transform:translateY(-1px);
-opacity:.96;
+opacity:.97;
 }
 
 #loginPage{
@@ -191,24 +241,23 @@ z-index:9999;
 
 .login-box{
 background:rgba(13,27,42,.92);
-padding:40px;
-width:340px;
-border-radius:20px;
-border:1px solid rgba(255,255,255,.05);
-box-shadow:
-0 0 30px rgba(34,211,238,.12),
-0 20px 40px rgba(0,0,0,.28);
+padding:42px;
+width:360px;
+border-radius:24px;
+border:1px solid rgba(255,255,255,.06);
+box-shadow:0 0 30px rgba(34,211,238,.12),0 20px 40px rgba(0,0,0,.28);
 }
 
 .login-box h2{
 text-align:center;
-color:#22d3ee;
-margin-bottom:20px;
+color:var(--cyan);
+margin-bottom:22px;
+font-size:2rem;
 }
 
 .login-box input{
 width:100%;
-margin-bottom:15px;
+margin-bottom:16px;
 }
 
 #msg{
@@ -219,85 +268,30 @@ min-height:20px;
 }
 
 #logoutBtn{
-background:linear-gradient(90deg,#fb7185,#ff4d6d);
+background:linear-gradient(90deg,#f43f5e,#fb7185);
 color:white;
 padding:10px 16px;
-border-radius:10px;
+border-radius:12px;
 box-shadow:none;
 }
-
-.cards .card:nth-child(1){border:1px solid rgba(34,211,238,.35); box-shadow:0 0 18px rgba(34,211,238,.10);}
-.cards .card:nth-child(2){border:1px solid rgba(74,222,128,.35); box-shadow:0 0 18px rgba(74,222,128,.10);}
-.cards .card:nth-child(3){border:1px solid rgba(250,204,21,.35); box-shadow:0 0 18px rgba(250,204,21,.10);}
-.cards .card:nth-child(4){border:1px solid rgba(251,113,133,.35); box-shadow:0 0 18px rgba(251,113,133,.10);}
-.cards .card:nth-child(5){border:1px solid rgba(192,132,252,.35); box-shadow:0 0 18px rgba(192,132,252,.10);}
 
 .view-switcher{
 display:flex;
 gap:12px;
-margin-bottom:20px;
+margin-bottom:22px;
 flex-wrap:wrap;
 }
 
 .view-switcher button{
-padding:12px 20px;
+padding:12px 22px;
 border:none;
-border-radius:12px;
-background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+border-radius:14px;
+background:linear-gradient(90deg,#0891b2,#6366f1);
 color:white;
 font-weight:700;
 cursor:pointer;
 }
 
-.dashboard-view{
-display:block;
-}
-
-.pro-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
-
-.pro-table th,.pro-table td{
-padding:14px;
-border:1px solid rgba(255,255,255,.08);
-text-align:left;
-}
-
-.pro-table th{
-background:rgba(255,255,255,.05);
-}
-
-.summary-grid{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:15px;
-margin-bottom:20px;
-}
-
-.summary-box{
-background:rgba(17,28,48,.78);
-padding:18px;
-border-radius:16px;
-border:1px solid rgba(255,255,255,.05);
-}
-
-.summary-box h4{
-color:#94a3b8;
-font-size:13px;
-margin-bottom:10px;
-}
-
-.summary-box p{
-font-size:22px;
-font-weight:700;
-}
-
-@media(max-width:1000px){
-.container{grid-template-columns:1fr;}
-.cards,.form-grid,.summary-grid{grid-template-columns:1fr;}
-}
 .view-switcher button.active-view{
 background:linear-gradient(90deg,#06b6d4,#2563eb);
 box-shadow:0 0 22px rgba(34,211,238,.28);
@@ -317,14 +311,64 @@ opacity:0;
 transform:translateY(8px);
 }
 
+.pro-table{
+width:100%;
+border-collapse:collapse;
+margin-top:15px;
+overflow:hidden;
+border-radius:16px;
+}
+
+.pro-table th,.pro-table td{
+padding:14px;
+border:1px solid rgba(255,255,255,.08);
+text-align:left;
+}
+
+.pro-table th{
+background:rgba(255,255,255,.05);
+}
+
+.summary-grid{
+display:grid;
+grid-template-columns:repeat(4,minmax(0,1fr));
+gap:16px;
+margin-bottom:20px;
+}
+
+.summary-box{
+background:#0f172a;
+padding:20px;
+border-radius:18px;
+border:1px solid rgba(148,163,184,.10);
+box-shadow:0 6px 16px rgba(0,0,0,.14);
+}
+
+.summary-box h4{
+color:var(--muted);
+font-size:14px;
+margin-bottom:12px;
+}
+
+.summary-box p{
+font-size:24px;
+font-weight:700;
+}
+
 .analytics-good{color:#4ade80;}
 .analytics-mid{color:#facc15;}
 .analytics-bad{color:#fb7185;}
 
-.sidebar li.active-side{
-border-color:rgba(34,211,238,.35);
-box-shadow:0 0 18px rgba(34,211,238,.12);
-background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(139,92,246,.10));
+@media(max-width:1200px){
+.cards{grid-template-columns:repeat(2,minmax(0,1fr));}
+.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+@media(max-width:1000px){
+.container{grid-template-columns:1fr;}
+.form-grid,.summary-grid,.cards{grid-template-columns:1fr;}
+.main{padding:18px;}
+.sidebar{padding:18px;}
 }
 </style>
 </head>
@@ -464,7 +508,7 @@ background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(139,92,246,.10));
 <button type="button" onclick="exportExcel()">Export Excel</button>
 </div>
 </div>
-<div id="financeDetectionBox" style="display:none; margin-top:20px; padding:18px; border-radius:16px; background:rgba(15,23,42,0.85); color:white; border:1px solid rgba(255,255,255,0.08);">
+<div id="financeDetectionBox" style="display:none; margin-top:20px; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96)); color:#f8fafc; border:1px solid rgba(148,163,184,.10); box-shadow:0 10px 24px rgba(0,0,0,.18);">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
         <h3 style="margin:0;">Detected Finance Mapping</h3>
         <div id="financeSheetUsed"></div>
@@ -624,9 +668,7 @@ return parseFloat(document.getElementById(id).value)||0;
 
 document.getElementById("kpiForm").onsubmit = async function(e){
     e.preventDefault();
-    alert("Run AI Analysis clicked");
-
-   let payload = {
+       let payload = {
 company_name: document.getElementById("company_name").value,
 
 current_revenue: val("current_revenue"),
@@ -1096,18 +1138,18 @@ async function importExcel() {
 
         document.getElementById("financeColumnsFound").innerHTML = columnsHtml;
 
-        const mappingCards = Object.entries(data.detected_columns || {}).map(([key, value]) => `
-            <div style="
-                background:#0b1220;
-                border:1px solid rgba(255,255,255,0.08);
-                border-radius:14px;
-                padding:12px;">
-                <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Finance Field</div>
-                <div style="font-weight:700;font-size:15px;margin-bottom:10px;">${formatFinanceLabel(key)}</div>
-                <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Matched Excel Column</div>
-                <div style="color:#22d3ee;font-weight:700;">${value}</div>
-            </div>
-        `).join("");
+       const mappingCards = Object.entries(data.detected_columns || {}).map(([key, value]) => `
+    <div style="
+        background:#0b1220;
+        border:1px solid rgba(148,163,184,.12);
+        border-radius:14px;
+        padding:14px;">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Finance Field</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:#f8fafc;">${formatFinanceLabel(key)}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Matched Excel Column</div>
+        <div style="color:#67e8f9;font-weight:700;">${value}</div>
+    </div>
+`).join("");
 
         document.getElementById("financeDetectedColumns").innerHTML =
             mappingCards || `<div style="color:#cbd5e1;">No mapping detected.</div>`;
@@ -1165,7 +1207,7 @@ async function importExcel() {
 
         calculateFinancials();
         syncTable();
-        alert("Excel imported successfully. KPIs updated.");
+        alert("Excel imported successfully.");
 
     } catch (error) {
         console.error(error);
