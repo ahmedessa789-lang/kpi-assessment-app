@@ -6,6 +6,7 @@
 <title>Eissa KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 *{
@@ -16,8 +17,11 @@ font-family:Arial,sans-serif;
 }
 
 body{
-background:linear-gradient(135deg,#050816,#0f172a);
-color:white;
+background:
+radial-gradient(circle at top left, rgba(34,211,238,0.12), transparent 25%),
+radial-gradient(circle at top right, rgba(168,85,247,0.14), transparent 30%),
+linear-gradient(135deg,#050816 0%,#0b1120 45%,#111827 100%);
+color:#f8fbff;
 min-height:100vh;
 }
 
@@ -28,16 +32,20 @@ min-height:100vh;
 }
 
 .sidebar{
-background:#081323;
+background:rgba(8,19,35,.88);
 padding:25px;
 border-right:1px solid rgba(255,255,255,.08);
+backdrop-filter:blur(12px);
+box-shadow:inset -1px 0 0 rgba(255,255,255,.04);
 }
 
 .brand{
-font-size:28px;
-font-weight:bold;
-color:#22d3ee;
+font-size:30px;
+font-weight:800;
+color:#67e8f9;
 margin-bottom:30px;
+text-shadow:0 0 18px rgba(103,232,249,.35);
+letter-spacing:.5px;
 }
 
 .sidebar ul{
@@ -45,10 +53,19 @@ list-style:none;
 }
 
 .sidebar li{
-padding:14px;
-margin-bottom:10px;
-background:#111c30;
-border-radius:10px;
+padding:14px 16px;
+margin-bottom:12px;
+background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+border-radius:14px;
+border:1px solid rgba(255,255,255,.05);
+color:#dbeafe;
+transition:.25s ease;
+}
+
+.sidebar li:hover{
+transform:translateX(4px);
+border-color:rgba(34,211,238,.25);
+box-shadow:0 0 16px rgba(34,211,238,.10);
 }
 
 .main{
@@ -59,18 +76,25 @@ padding:25px;
 display:flex;
 justify-content:space-between;
 align-items:center;
-background:#111c30;
-padding:20px;
-border-radius:16px;
+background:rgba(17,28,48,.78);
+padding:22px;
+border-radius:18px;
 margin-bottom:20px;
+border:1px solid rgba(255,255,255,.05);
+backdrop-filter:blur(14px);
+box-shadow:0 12px 28px rgba(0,0,0,.22);
+gap:12px;
+flex-wrap:wrap;
 }
 
 .live{
-background:#163f2b;
+background:rgba(34,197,94,.12);
 color:#4ade80;
-padding:10px 15px;
+padding:10px 16px;
 border-radius:30px;
-font-weight:bold;
+font-weight:700;
+border:1px solid rgba(34,197,94,.18);
+box-shadow:0 0 18px rgba(34,197,94,.10);
 }
 
 .cards{
@@ -81,9 +105,13 @@ margin-bottom:20px;
 }
 
 .card{
-background:#111c30;
-padding:20px;
-border-radius:16px;
+background:rgba(17,28,48,.78);
+padding:22px;
+border-radius:18px;
+border:1px solid rgba(255,255,255,.05);
+box-shadow:
+0 10px 24px rgba(0,0,0,.22),
+inset 0 1px 0 rgba(255,255,255,.03);
 }
 
 .card h3{
@@ -93,15 +121,18 @@ margin-bottom:10px;
 }
 
 .card p{
-font-size:30px;
-font-weight:bold;
+font-size:34px;
+font-weight:800;
+color:#e2e8f0;
 }
 
 .section{
-background:#111c30;
-padding:25px;
-border-radius:16px;
+background:rgba(17,28,48,.78);
+padding:28px;
+border-radius:18px;
 margin-bottom:20px;
+border:1px solid rgba(255,255,255,.05);
+box-shadow:0 12px 28px rgba(0,0,0,.20);
 }
 
 .section h2{
@@ -122,15 +153,30 @@ font-size:14px;
 }
 
 input{
-background:#061525;
+background:rgba(6,21,37,.95);
 color:white;
+border:1px solid rgba(255,255,255,.06);
+outline:none;
+transition:.2s ease;
+}
+
+input:focus{
+border-color:rgba(34,211,238,.45);
+box-shadow:0 0 0 3px rgba(34,211,238,.12);
 }
 
 button{
-background:#22d3ee;
-color:black;
-font-weight:bold;
+background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+color:white;
+font-weight:700;
 cursor:pointer;
+box-shadow:0 10px 22px rgba(34,211,238,.18);
+transition:.25s ease;
+}
+
+button:hover{
+transform:translateY(-1px);
+opacity:.96;
 }
 
 #loginPage{
@@ -144,10 +190,14 @@ z-index:9999;
 }
 
 .login-box{
-background:#0d1b2a;
+background:rgba(13,27,42,.92);
 padding:40px;
 width:340px;
-border-radius:15px;
+border-radius:20px;
+border:1px solid rgba(255,255,255,.05);
+box-shadow:
+0 0 30px rgba(34,211,238,.12),
+0 20px 40px rgba(0,0,0,.28);
 }
 
 .login-box h2{
@@ -169,18 +219,114 @@ min-height:20px;
 }
 
 #logoutBtn{
-background:#ff4d6d;
+background:linear-gradient(90deg,#fb7185,#ff4d6d);
 color:white;
 padding:10px 16px;
 border-radius:10px;
+box-shadow:none;
+}
+
+.cards .card:nth-child(1){border:1px solid rgba(34,211,238,.35); box-shadow:0 0 18px rgba(34,211,238,.10);}
+.cards .card:nth-child(2){border:1px solid rgba(74,222,128,.35); box-shadow:0 0 18px rgba(74,222,128,.10);}
+.cards .card:nth-child(3){border:1px solid rgba(250,204,21,.35); box-shadow:0 0 18px rgba(250,204,21,.10);}
+.cards .card:nth-child(4){border:1px solid rgba(251,113,133,.35); box-shadow:0 0 18px rgba(251,113,133,.10);}
+.cards .card:nth-child(5){border:1px solid rgba(192,132,252,.35); box-shadow:0 0 18px rgba(192,132,252,.10);}
+
+.view-switcher{
+display:flex;
+gap:12px;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.view-switcher button{
+padding:12px 20px;
+border:none;
+border-radius:12px;
+background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+color:white;
+font-weight:700;
+cursor:pointer;
+}
+
+.dashboard-view{
+display:block;
+}
+
+.pro-table{
+width:100%;
+border-collapse:collapse;
+margin-top:15px;
+}
+
+.pro-table th,.pro-table td{
+padding:14px;
+border:1px solid rgba(255,255,255,.08);
+text-align:left;
+}
+
+.pro-table th{
+background:rgba(255,255,255,.05);
+}
+
+.summary-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:15px;
+margin-bottom:20px;
+}
+
+.summary-box{
+background:rgba(17,28,48,.78);
+padding:18px;
+border-radius:16px;
+border:1px solid rgba(255,255,255,.05);
+}
+
+.summary-box h4{
+color:#94a3b8;
+font-size:13px;
+margin-bottom:10px;
+}
+
+.summary-box p{
+font-size:22px;
+font-weight:700;
 }
 
 @media(max-width:1000px){
 .container{grid-template-columns:1fr;}
-.cards,.form-grid{grid-template-columns:1fr;}
+.cards,.form-grid,.summary-grid{grid-template-columns:1fr;}
+}
+.view-switcher button.active-view{
+background:linear-gradient(90deg,#06b6d4,#2563eb);
+box-shadow:0 0 22px rgba(34,211,238,.28);
+transform:translateY(-1px);
+}
+
+.dashboard-view{
+display:block;
+opacity:1;
+transform:translateY(0);
+transition:opacity .25s ease, transform .25s ease;
+}
+
+.dashboard-view.hidden-view{
+display:none;
+opacity:0;
+transform:translateY(8px);
+}
+
+.analytics-good{color:#4ade80;}
+.analytics-mid{color:#facc15;}
+.analytics-bad{color:#fb7185;}
+
+.sidebar li.active-side{
+border-color:rgba(34,211,238,.35);
+box-shadow:0 0 18px rgba(34,211,238,.12);
+background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(139,92,246,.10));
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -203,10 +349,10 @@ border-radius:10px;
 <aside class="sidebar">
 <div class="brand">Eissa</div>
 <ul>
-<li>CEO Dashboard</li>
-<li>AI Analysis</li>
-<li>Reports</li>
-<li>Settings</li>
+<li class="side-link active-side" onclick="showView('executive')">CEO Dashboard</li>
+<li class="side-link" onclick="showView('analytics')">AI Analysis</li>
+<li class="side-link" onclick="showView('finance')">Finance</li>
+<li class="side-link" onclick="showView('table')">Reports Table</li>
 </ul>
 </aside>
 
@@ -223,6 +369,14 @@ border-radius:10px;
 </div>
 </div>
 
+<div class="view-switcher">
+<button class="view-btn active-view" data-view="executive" onclick="showView('executive')">Executive</button>
+<button class="view-btn" data-view="finance" onclick="showView('finance')">Finance</button>
+<button class="view-btn" data-view="analytics" onclick="showView('analytics')">Analytics</button>
+<button class="view-btn" data-view="table" onclick="showView('table')">Table</button>
+</div>
+
+<div id="executiveView" class="dashboard-view">
 <div class="cards">
 <div class="card"><h3>Overall</h3><p id="overallScore">0</p></div>
 <div class="card"><h3>Sales</h3><p id="salesScore">0</p></div>
@@ -233,57 +387,6 @@ border-radius:10px;
 
 <div class="section">
 <h2>Input Data</h2>
-<div class="section">
-<h2>Financial Statements</h2>
-
-<div class="form-grid">
-
-<input type="number" id="fs_revenue" placeholder="Revenue">
-<input type="number" id="fs_cogs" placeholder="COGS">
-<input type="number" id="fs_operating_expenses" placeholder="Operating Expenses">
-<input type="number" id="fs_other_expenses" placeholder="Other Expenses">
-
-<input type="number" id="fs_current_assets" placeholder="Current Assets">
-<input type="number" id="fs_fixed_assets" placeholder="Fixed Assets">
-<input type="number" id="fs_current_liabilities" placeholder="Current Liabilities">
-<input type="number" id="fs_long_term_liabilities" placeholder="Long-term Liabilities">
-
-<input type="number" id="fs_cash_in" placeholder="Cash In">
-<input type="number" id="fs_cash_out" placeholder="Cash Out">
-<input type="number" id="fs_investing_cash_flow" placeholder="Investing Cash Flow">
-<input type="number" id="fs_financing_cash_flow" placeholder="Financing Cash Flow">
-
-</div>
-
-<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-<button type="button" onclick="calculateFinancials()">Calculate Financial Statements</button>
-
-<input type="file" id="excelFile" accept=".xlsx,.xls" style="background:#061525;color:white;padding:10px;border-radius:10px;">
-
-<button type="button" onclick="importExcel()">Import Excel</button>
-<button onclick="exportExcel()">Export Excel</button>
-</div>
-</div>
-
-<div class="section">
-<h2>Financial Results</h2>
-
-<div class="cards">
-<div class="card"><h3>Gross Profit</h3><p id="grossProfit">0</p></div>
-<div class="card"><h3>Operating Profit</h3><p id="operatingProfit">0</p></div>
-<div class="card"><h3>Net Profit</h3><p id="netProfit">0</p></div>
-<div class="card"><h3>Total Assets</h3><p id="totalAssets">0</p></div>
-<div class="card"><h3>Equity</h3><p id="equity">0</p></div>
-</div>
-
-<div class="cards">
-<div class="card"><h3>Net Cash Flow</h3><p id="netCashFlow">0</p></div>
-<div class="card"><h3>Current Ratio</h3><p id="currentRatio">0</p></div>
-<div class="card"><h3>Quick Ratio</h3><p id="quickRatio">0</p></div>
-<div class="card"><h3>Debt to Equity</h3><p id="debtToEquity">0</p></div>
-<div class="card"><h3>ROA</h3><p id="roa">0%</p></div>
-</div>
-</div>
 
 <form id="kpiForm">
 <div class="form-grid">
@@ -327,11 +430,68 @@ border-radius:10px;
 
 </form>
 </div>
+</div>
 
+<div id="executiveView" class="dashboard-view">
+<div class="section">
+<h2>Financial Statements</h2>
+
+<div class="form-grid">
+
+<input type="number" id="fs_revenue" placeholder="Revenue">
+<input type="number" id="fs_cogs" placeholder="COGS">
+<input type="number" id="fs_operating_expenses" placeholder="Operating Expenses">
+<input type="number" id="fs_other_expenses" placeholder="Other Expenses">
+
+<input type="number" id="fs_current_assets" placeholder="Current Assets">
+<input type="number" id="fs_fixed_assets" placeholder="Fixed Assets">
+<input type="number" id="fs_current_liabilities" placeholder="Current Liabilities">
+<input type="number" id="fs_long_term_liabilities" placeholder="Long-term Liabilities">
+
+<input type="number" id="fs_cash_in" placeholder="Cash In">
+<input type="number" id="fs_cash_out" placeholder="Cash Out">
+<input type="number" id="fs_investing_cash_flow" placeholder="Investing Cash Flow">
+<input type="number" id="fs_financing_cash_flow" placeholder="Financing Cash Flow">
+
+</div>
+
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+<button type="button" onclick="calculateFinancials()">Calculate Financial Statements</button>
+
+<input type="file" id="excelFile" accept=".xlsx,.xls" style="background:#061525;color:white;padding:10px;border-radius:10px;">
+
+<button type="button" onclick="importExcel()">Import Excel</button>
+<button type="button" onclick="exportExcel()">Export Excel</button>
+</div>
+</div>
+
+<div class="section">
+<h2>Financial Results</h2>
+
+<div class="cards">
+<div class="card"><h3>Gross Profit</h3><p id="grossProfit">0</p></div>
+<div class="card"><h3>Operating Profit</h3><p id="operatingProfit">0</p></div>
+<div class="card"><h3>Net Profit</h3><p id="netProfit">0</p></div>
+<div class="card"><h3>Total Assets</h3><p id="totalAssets">0</p></div>
+<div class="card"><h3>Equity</h3><p id="equity">0</p></div>
+</div>
+
+<div class="cards">
+<div class="card"><h3>Net Cash Flow</h3><p id="netCashFlow">0</p></div>
+<div class="card"><h3>Current Ratio</h3><p id="currentRatio">0</p></div>
+<div class="card"><h3>Quick Ratio</h3><p id="quickRatio">0</p></div>
+<div class="card"><h3>Debt to Equity</h3><p id="debtToEquity">0</p></div>
+<div class="card"><h3>ROA</h3><p id="roa">0%</p></div>
+</div>
+</div>
+</div>
+
+<div id="analyticsView" class="dashboard-view hidden-view">
 <div class="section">
 <h2>Chart</h2>
 <canvas id="chart1"></canvas>
 </div>
+
 <div class="section">
 <h2>Recommendations</h2>
 <ul id="recommendationsList" style="padding-left:20px;line-height:1.9;color:#dbeafe;">
@@ -339,11 +499,60 @@ border-radius:10px;
 </ul>
 </div>
 
+<div class="section">
+<h2>Analytics Summary</h2>
+<div class="summary-grid">
+<div class="summary-box">
+<h4>Best KPI</h4>
+<p id="bestKpi">-</p>
+</div>
+<div class="summary-box">
+<h4>Weakest KPI</h4>
+<p id="weakestKpi">-</p>
+</div>
+<div class="summary-box">
+<h4>Trend</h4>
+<p id="trendSignal">-</p>
+</div>
+<div class="summary-box">
+<h4>Priority</h4>
+<p id="priorityMetric">-</p>
+</div>
+</div>
+</div>
+</div>
+
+<div id="tableView" class="dashboard-view hidden-view">
+<div class="section">
+<h2>Data Table</h2>
+<table class="pro-table">
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+<tr><td>Overall Score</td><td id="tblOverall">0</td></tr>
+<tr><td>Sales</td><td id="tblSales">0</td></tr>
+<tr><td>Finance</td><td id="tblFinance">0</td></tr>
+<tr><td>Operations</td><td id="tblOperations">0</td></tr>
+<tr><td>Inventory</td><td id="tblInventory">0</td></tr>
+<tr><td>Gross Profit</td><td id="tblGrossProfit">0</td></tr>
+<tr><td>Operating Profit</td><td id="tblOperatingProfit">0</td></tr>
+<tr><td>Net Profit</td><td id="tblNetProfit">0</td></tr>
+<tr><td>Total Assets</td><td id="tblTotalAssets">0</td></tr>
+<tr><td>Equity</td><td id="tblEquity">0</td></tr>
+<tr><td>Net Cash Flow</td><td id="tblNetCashFlow">0</td></tr>
+<tr><td>Current Ratio</td><td id="tblCurrentRatio">0</td></tr>
+<tr><td>Quick Ratio</td><td id="tblQuickRatio">0</td></tr>
+<tr><td>Debt to Equity</td><td id="tblDebtToEquity">0</td></tr>
+<tr><td>ROA</td><td id="tblRoa">0%</td></tr>
+</table>
+</div>
+</div>
+
 </main>
 </div>
 
 <script>
-
 function login(){
 
 let user=document.getElementById("email").value.trim();
@@ -390,6 +599,7 @@ showLogout();
 document.querySelector(".container").style.display="none";
 }
 
+showView("executive");
 }
 
 function val(id){
@@ -446,40 +656,46 @@ document.getElementById("inventoryScore").innerText=result.inventory.score;
 
 drawChart(result);
 renderRecommendations(result);
-
-}
-function renderRecommendations(result){
-let rec = [];
-
-if(result.sales.score < 70){
-rec.push("Improve sales conversion and increase target achievement.");
+renderAnalyticsSummary(result);
+syncTable();
 }
 
-if(result.finance.score < 70){
-rec.push("Review expenses, receivables, and cash flow control.");
+function renderAnalyticsSummary(result){
+const metrics = [
+{name:"Sales", score: result.sales.score},
+{name:"Finance", score: result.finance.score},
+{name:"Operations", score: result.operations.score},
+{name:"Inventory", score: result.inventory.score}
+];
+
+metrics.sort((a,b)=>b.score-a.score);
+
+const best = document.getElementById("bestKpi");
+const weakest = document.getElementById("weakestKpi");
+const priority = document.getElementById("priorityMetric");
+const trend = document.getElementById("trendSignal");
+
+best.innerText = metrics[0].name + " (" + metrics[0].score + ")";
+weakest.innerText = metrics[metrics.length-1].name + " (" + metrics[metrics.length-1].score + ")";
+priority.innerText = metrics[metrics.length-1].name;
+
+best.className = "analytics-good";
+weakest.className = "analytics-bad";
+priority.className = "analytics-mid";
+trend.className = "";
+
+if(result.overall.score >= 85){
+trend.innerText = "Strong";
+trend.classList.add("analytics-good");
+}else if(result.overall.score >= 60){
+trend.innerText = "Stable";
+trend.classList.add("analytics-mid");
+}else{
+trend.innerText = "Critical";
+trend.classList.add("analytics-bad");
+}
 }
 
-if(result.operations.score < 70){
-rec.push("Improve delivery performance and reduce operational errors.");
-}
-
-if(result.inventory.score < 70){
-rec.push("Increase stock accuracy and reduce out-of-stock cases.");
-}
-
-if(rec.length === 0){
-rec.push("Overall performance is strong. Maintain monitoring and continuous improvement.");
-}
-
-let list = document.getElementById("recommendationsList");
-list.innerHTML = "";
-
-rec.forEach(item=>{
-let li = document.createElement("li");
-li.innerText = item;
-list.appendChild(li);
-});
-}
 let chart;
 
 function drawChart(result){
@@ -500,6 +716,13 @@ result.finance.score,
 result.operations.score,
 result.inventory.score,
 result.overall.score
+],
+backgroundColor:[
+"rgba(74,222,128,0.7)",
+"rgba(250,204,21,0.7)",
+"rgba(251,113,133,0.7)",
+"rgba(192,132,252,0.7)",
+"rgba(34,211,238,0.7)"
 ]
 }]
 }
@@ -602,6 +825,7 @@ doc.text("Powered by Eissa KPI Dashboard", 120, 280);
 
 doc.save("Eissa_Premium_Executive_Report.pdf");
 }
+
 function fval(id){
 return parseFloat(document.getElementById(id).value) || 0;
 }
@@ -648,7 +872,10 @@ document.getElementById("currentRatio").innerText = currentRatio;
 document.getElementById("quickRatio").innerText = quickRatio;
 document.getElementById("debtToEquity").innerText = debtToEquity;
 document.getElementById("roa").innerText = roa + "%";
+
+syncTable();
 }
+
 async function importExcel(){
 const fileInput = document.getElementById("excelFile");
 const file = fileInput.files[0];
@@ -685,6 +912,7 @@ console.error(error);
 alert("Error while importing Excel.");
 }
 }
+
 function exportExcel() {
 
 function val(id){
@@ -719,28 +947,105 @@ XLSX.utils.book_append_sheet(wb, ws1, "Summary");
 
 let data = [
 ["Financial Statements"],
-
-["Revenue", val("revenue")],
-["COGS", val("cogs")],
-["Operating Expenses", val("operatingExpenses")],
-["Other Expenses", val("otherExpenses")],
-
-["Current Assets", val("currentAssets")],
-["Fixed Assets", val("fixedAssets")],
-["Current Liabilities", val("currentLiabilities")],
-["Long Term Liabilities", val("longTermLiabilities")],
-
-["Cash In", val("cashIn")],
-["Cash Out", val("cashOut")],
-["Investing Cash Flow", val("investingCashFlow")],
-["Financing Cash Flow", val("financingCashFlow")]
+["Revenue", val("fs_revenue")],
+["COGS", val("fs_cogs")],
+["Operating Expenses", val("fs_operating_expenses")],
+["Other Expenses", val("fs_other_expenses")],
+["Current Assets", val("fs_current_assets")],
+["Fixed Assets", val("fs_fixed_assets")],
+["Current Liabilities", val("fs_current_liabilities")],
+["Long Term Liabilities", val("fs_long_term_liabilities")],
+["Cash In", val("fs_cash_in")],
+["Cash Out", val("fs_cash_out")],
+["Investing Cash Flow", val("fs_investing_cash_flow")],
+["Financing Cash Flow", val("fs_financing_cash_flow")]
 ];
 
 let ws2 = XLSX.utils.aoa_to_sheet(data);
 XLSX.utils.book_append_sheet(wb, ws2, "Statements");
 
 XLSX.writeFile(wb, "Eissa_Financial_Report.xlsx");
+}
 
+function showView(view){
+const views = ["executive","finance","analytics","table"];
+
+views.forEach(v=>{
+const el = document.getElementById(v + "View");
+if(el){
+el.style.display = "none";
+el.classList.add("hidden-view");
+}
+});
+
+const activeEl = document.getElementById(view + "View");
+if(activeEl){
+activeEl.style.display = "block";
+setTimeout(() => {
+activeEl.classList.remove("hidden-view");
+}, 10);
+}
+
+document.querySelectorAll(".view-btn").forEach(btn=>{
+btn.classList.remove("active-view");
+if(btn.dataset.view === view){
+btn.classList.add("active-view");
+}
+});
+
+document.querySelectorAll(".side-link").forEach(item=>{
+item.classList.remove("active-side");
+});
+
+if(view === "executive") document.querySelectorAll(".side-link")[0]?.classList.add("active-side");
+if(view === "analytics") document.querySelectorAll(".side-link")[1]?.classList.add("active-side");
+if(view === "finance") document.querySelectorAll(".side-link")[2]?.classList.add("active-side");
+if(view === "table") document.querySelectorAll(".side-link")[3]?.classList.add("active-side");
+
+syncTable();
+}
+
+function syncTable(){
+let g=(id)=>document.getElementById(id)?.innerText || "0";
+
+document.getElementById("tblOverall").innerText=g("overallScore");
+document.getElementById("tblSales").innerText=g("salesScore");
+document.getElementById("tblFinance").innerText=g("financeScore");
+document.getElementById("tblOperations").innerText=g("operationsScore");
+document.getElementById("tblInventory").innerText=g("inventoryScore");
+document.getElementById("tblGrossProfit").innerText=g("grossProfit");
+document.getElementById("tblOperatingProfit").innerText=g("operatingProfit");
+document.getElementById("tblNetProfit").innerText=g("netProfit");
+document.getElementById("tblTotalAssets").innerText=g("totalAssets");
+document.getElementById("tblEquity").innerText=g("equity");
+document.getElementById("tblNetCashFlow").innerText=g("netCashFlow");
+document.getElementById("tblCurrentRatio").innerText=g("currentRatio");
+document.getElementById("tblQuickRatio").innerText=g("quickRatio");
+document.getElementById("tblDebtToEquity").innerText=g("debtToEquity");
+document.getElementById("tblRoa").innerText=g("roa");
+}
+
+function renderAnalyticsSummary(result){
+const metrics = [
+{name:"Sales", score: result.sales.score},
+{name:"Finance", score: result.finance.score},
+{name:"Operations", score: result.operations.score},
+{name:"Inventory", score: result.inventory.score}
+];
+
+metrics.sort((a,b)=>b.score-a.score);
+
+document.getElementById("bestKpi").innerText = metrics[0].name;
+document.getElementById("weakestKpi").innerText = metrics[metrics.length-1].name;
+document.getElementById("priorityMetric").innerText = metrics[metrics.length-1].name;
+
+if(result.overall.score >= 85){
+document.getElementById("trendSignal").innerText = "Strong";
+}else if(result.overall.score >= 60){
+document.getElementById("trendSignal").innerText = "Stable";
+}else{
+document.getElementById("trendSignal").innerText = "Critical";
+}
 }
 </script>
 </body>
