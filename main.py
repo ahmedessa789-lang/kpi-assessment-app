@@ -241,11 +241,24 @@ def detect_ceo_data(df: pd.DataFrame) -> Dict[str, Any]:
     return result
 
 
-def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
-    excel_file = pd.ExcelFile(file_path)
-    best_sheet = find_best_sheet_generic(excel_file, FINANCE_KEYWORDS)
-    df = pd.read_excel(excel_file, sheet_name=best_sheet)
+
+def load_tabular_data_flexible(file_path: str, keyword_dict: Dict[str, List[str]]):
+    extension = os.path.splitext(file_path)[1].lower()
+
+    if extension == ".csv":
+        df = pd.read_csv(file_path)
+        sheet_used = "CSV File"
+    else:
+        excel_file = pd.ExcelFile(file_path)
+        sheet_used = find_best_sheet_generic(excel_file, keyword_dict)
+        df = pd.read_excel(excel_file, sheet_name=sheet_used)
+
     df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
+    return df, sheet_used
+
+
+def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
+    df, best_sheet = load_tabular_data_flexible(file_path, FINANCE_KEYWORDS)
 
     finance_data = detect_finance_data(df)
     finance_data["sheet_used"] = best_sheet
@@ -254,14 +267,19 @@ def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
 
 
 def read_ceo_excel_flexible(file_path: str) -> Dict[str, Any]:
-    excel_file = pd.ExcelFile(file_path)
-    best_sheet = find_best_sheet_generic(excel_file, CEO_KEYWORDS)
-    df = pd.read_excel(excel_file, sheet_name=best_sheet)
-    df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
+    df, best_sheet = load_tabular_data_flexible(file_path, CEO_KEYWORDS)
 
     ceo_data = detect_ceo_data(df)
     ceo_data["sheet_used"] = best_sheet
     ceo_data["columns_found_in_sheet"] = [str(col) for col in df.columns]
+    ceo_data["auto_fill_fields"] = {
+        "current_revenue": round(float(ceo_data.get("revenue", 0) or 0), 2),
+        "leads_count": int(round(float(ceo_data.get("leads", 0) or 0))),
+        "orders_count": int(round(float(ceo_data.get("orders", 0) or 0))),
+        "total_expenses": round(float(ceo_data.get("expenses", 0) or 0), 2),
+        "average_inventory": round(float(ceo_data.get("inventory", 0) or 0), 2),
+        "cash_in": round(float(ceo_data.get("cash", 0) or 0), 2),
+    }
     return ceo_data
 
 
@@ -383,10 +401,20 @@ def home():
     return FileResponse("static/index.html")
 
 
+def validate_upload_extension(filename: str) -> None:
+    allowed_extensions = {".xlsx", ".xls", ".csv"}
+    extension = os.path.splitext(filename)[1].lower()
+    if extension not in allowed_extensions:
+        raise ValueError("Only .xlsx, .xls, and .csv files are supported.")
+
+
+
+
 @app.post("/upload-ceo")
 async def upload_ceo(file: UploadFile = File(...)):
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
+    validate_upload_extension(file.filename)
     file_path = os.path.join(upload_dir, file.filename)
 
     with open(file_path, "wb") as buffer:
@@ -394,15 +422,28 @@ async def upload_ceo(file: UploadFile = File(...)):
 
     try:
         ceo_data = read_ceo_excel_flexible(file_path)
-        return {"success": True, "message": "CEO file processed successfully", "data": ceo_data}
+        return {
+            "success": True,
+            "message": "CEO file processed successfully",
+            "data": ceo_data,
+            "auto_fill_fields": ceo_data.get("auto_fill_fields", {}),
+        }
     except Exception as e:
         return {"success": False, "message": f"Error processing CEO file: {str(e)}"}
+
+
+
+
+@app.post("/import-ceo-file")
+async def import_ceo_file(file: UploadFile = File(...)):
+    return await upload_ceo(file)
 
 
 @app.post("/upload-finance")
 async def upload_finance(file: UploadFile = File(...)):
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
+    validate_upload_extension(file.filename)
     file_path = os.path.join(upload_dir, file.filename)
 
     with open(file_path, "wb") as buffer:

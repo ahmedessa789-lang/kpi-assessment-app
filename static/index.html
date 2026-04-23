@@ -558,9 +558,28 @@ font-size:16px;
 
 </div>
 
-<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
 <button type="submit">Run AI Analysis</button>
 <button type="button" onclick="exportPDF()">Export PDF</button>
+<input type="file" id="ceoExcelFile" accept=".xlsx,.xls,.csv" style="background:#061525;color:white;padding:10px;border-radius:10px;">
+<button type="button" onclick="importCEOExcel()">Import CEO File</button>
+</div>
+
+<div id="ceoDetectionBox" style="display:none; margin-top:20px; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96)); color:#f8fafc; border:1px solid rgba(148,163,184,.10); box-shadow:0 10px 24px rgba(0,0,0,.18);">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <h3 style="margin:0;">Detected CEO Mapping</h3>
+        <div id="ceoSheetUsed"></div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+        <div style="font-weight:700; margin-bottom:8px;">Columns Found</div>
+        <div id="ceoColumnsFound" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <div>
+        <div style="font-weight:700; margin-bottom:8px;">Detected Mapping</div>
+        <div id="ceoDetectedColumns" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;"></div>
+    </div>
 </div>
 
 </form>
@@ -1380,6 +1399,114 @@ document.getElementById("tblQuickRatio").innerText=g("quickRatio");
 document.getElementById("tblDebtToEquity").innerText=g("debtToEquity");
 document.getElementById("tblRoa").innerText=g("roa");
 }
+
+
+async function importCEOExcel() {
+    const fileInput = document.getElementById("ceoExcelFile");
+
+    if (!fileInput.files.length) {
+        alert("Please select CEO Excel file");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        const response = await fetch("/import-ceo-file", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            alert(result.message || "CEO upload failed");
+            return;
+        }
+
+        const data = result.data;
+        const autoFill = result.auto_fill_fields || {};
+
+        document.getElementById("ceoDetectionBox").style.display = "block";
+
+        function formatCEOLabel(key) {
+            const labels = {
+                revenue: "Revenue",
+                leads: "Leads Count",
+                orders: "Orders Count",
+                expenses: "Expenses",
+                inventory: "Average Inventory",
+                cash: "Cash In"
+            };
+            return labels[key] || key;
+        }
+
+        document.getElementById("ceoSheetUsed").innerHTML =
+            `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);font-weight:700;color:white;">
+                Sheet: ${data.sheet_used || "N/A"}
+            </span>`;
+
+        const columnsHtml = (data.columns_found_in_sheet || []).map(col => `
+            <span style="
+                display:inline-block;
+                padding:8px 12px;
+                border-radius:999px;
+                background:#0b1220;
+                border:1px solid rgba(255,255,255,0.08);
+                color:#e5e7eb;
+                font-size:14px;">
+                ${col}
+            </span>
+        `).join("");
+
+        document.getElementById("ceoColumnsFound").innerHTML = columnsHtml || `<div style="color:#cbd5e1;">No columns found.</div>`;
+
+        const mappingCards = Object.entries(data.detected_columns || {}).map(([key, value]) => `
+            <div style="
+                background:#0b1220;
+                border:1px solid rgba(148,163,184,.12);
+                border-radius:14px;
+                padding:14px;">
+                <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">CEO Field</div>
+                <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:#f8fafc;">${formatCEOLabel(key)}</div>
+                <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Matched Excel Column</div>
+                <div style="color:#67e8f9;font-weight:700;">${value}</div>
+            </div>
+        `).join("");
+
+        document.getElementById("ceoDetectedColumns").innerHTML =
+            mappingCards || `<div style="color:#cbd5e1;">No mapping detected.</div>`;
+
+        const ceoFieldMap = {
+            current_revenue: autoFill.current_revenue ?? data.revenue,
+            revenue: autoFill.revenue ?? data.revenue,
+            leads_count: autoFill.leads_count ?? data.leads,
+            orders_count: autoFill.orders_count ?? data.orders,
+            total_expenses: autoFill.total_expenses ?? data.expenses,
+            average_inventory: autoFill.average_inventory ?? data.inventory,
+            cash_in: autoFill.cash_in ?? data.cash
+        };
+
+        Object.entries(ceoFieldMap).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (el && value !== undefined && value !== null) {
+                el.value = value;
+            }
+        });
+
+        const companyInput = document.getElementById("company_name");
+        if (companyInput && !companyInput.value.trim()) {
+            companyInput.value = "Reap Service";
+        }
+
+        alert("CEO Excel imported successfully. Executive fields updated.");
+    } catch (error) {
+        console.error(error);
+        alert("CEO upload failed");
+    }
+}
+
 
 async function importExcel() {
     const fileInput = document.getElementById("excelFile");
