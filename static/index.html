@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eissa KPI Dashboard</title>
+<title>Reap Service KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -333,96 +333,100 @@ background:linear-gradient(135deg,rgba(14,165,233,.18),rgba(59,130,246,.10));
 box-shadow:0 0 16px rgba(56,189,248,.10);
 }
 
-.about-standalone{
+#aboutPage{
 display:none;
 min-height:100vh;
-padding:48px 22px;
-align-items:center;
-justify-content:center;
+padding:40px 20px;
+background:
+radial-gradient(circle at top left, rgba(56,189,248,0.10), transparent 25%),
+radial-gradient(circle at top right, rgba(139,92,246,0.10), transparent 30%),
+linear-gradient(135deg,#06101f 0%,#0b1730 45%,#111827 100%);
 }
 
-.about-card{
-width:min(900px,100%);
+.about-shell{
+max-width:980px;
+margin:40px auto;
 background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96));
-border:1px solid rgba(148,163,184,.12);
+border:1px solid rgba(148,163,184,.10);
 border-radius:24px;
-padding:42px;
-box-shadow:0 24px 60px rgba(0,0,0,.28);
+padding:40px;
+box-shadow:0 20px 40px rgba(0,0,0,.20);
 }
 
-.about-badge{
+.about-eyebrow{
 display:inline-block;
 padding:8px 14px;
 border-radius:999px;
 background:rgba(34,211,238,.12);
-border:1px solid rgba(34,211,238,.28);
+border:1px solid rgba(34,211,238,.20);
 color:#67e8f9;
 font-weight:700;
 margin-bottom:18px;
 }
 
-.about-card h1{
-font-size:40px;
-margin-bottom:12px;
-line-height:1.2;
+.about-shell h1{
+font-size:42px;
+margin-bottom:14px;
+color:#f8fafc;
 }
 
-.about-card p{
-color:#cbd5e1;
+.about-shell p{
+font-size:18px;
 line-height:1.9;
-font-size:16px;
-margin-bottom:14px;
+color:#dbeafe;
+margin-bottom:18px;
 }
 
 .about-grid{
 display:grid;
-grid-template-columns:repeat(2,minmax(0,1fr));
-gap:16px;
-margin:26px 0;
+grid-template-columns:repeat(2,1fr);
+gap:18px;
+margin:28px 0;
 }
 
-.about-item{
-background:#0b1220;
+.about-card{
+background:#0f172a;
 border:1px solid rgba(148,163,184,.10);
 border-radius:18px;
-padding:18px;
+padding:22px;
 }
 
-.about-item h3{
-font-size:17px;
-margin-bottom:8px;
+.about-card h3{
+margin-bottom:10px;
 color:#f8fafc;
+font-size:28px;
 }
 
-.about-item p{
+.about-card h4{
+margin-bottom:10px;
+color:#f8fafc;
+font-size:18px;
+}
+
+.about-card p{
+font-size:16px;
 margin:0;
-font-size:14px;
-color:#94a3b8;
-line-height:1.7;
+color:#cbd5e1;
+line-height:1.8;
 }
 
 .about-actions{
 display:flex;
 gap:12px;
 flex-wrap:wrap;
-margin-top:18px;
+margin-top:28px;
 }
 
-.secondary-btn{
-background:#0b1220;
-border:1px solid rgba(148,163,184,.12);
-color:#e2e8f0;
-box-shadow:none;
+#enterAppBtn{
+background:linear-gradient(90deg,#06b6d4,#6366f1);
+padding:14px 22px;
+font-size:16px;
 }
 
-.secondary-btn:hover{
-background:#111827;
-}
-
-@media(max-width:900px){
-.about-card{padding:28px;}
-.about-card h1{font-size:30px;}
+@media(max-width:1000px){
 .about-grid{grid-template-columns:1fr;}
+.about-shell{padding:28px;}
+.about-shell h1{font-size:34px;}
 }
 
 </style>
@@ -432,7 +436,7 @@ background:#111827;
 
 <div id="loginPage">
 <div class="login-box">
-<h2>EISSA LOGIN</h2>
+<h2>Reap Service LOGIN</h2>
 
 <input type="text" id="email" placeholder="Username">
 <input type="password" id="password" placeholder="Password">
@@ -443,47 +447,42 @@ background:#111827;
 </div>
 </div>
 
-
-<div id="aboutStandalonePage" class="about-standalone">
-<div class="about-card">
-<div class="about-badge">About App</div>
-<h1>Eissa KPI Dashboard</h1>
+<div id="aboutPage">
+<div class="about-shell">
+<div class="about-eyebrow">About App</div>
+<h1>Reap Service KPI Dashboard</h1>
 <p>This application helps management review business performance through KPI analysis, financial statement review, automated Excel import, visual charts, and executive reporting in one place.</p>
 <p>The dashboard is designed so each module supports a different business need: CEO performance review, finance analysis, AI recommendations, and consolidated reporting.</p>
-
 <div class="about-grid">
-<div class="about-item">
-<h3>CEO Module</h3>
-<p>Track commercial and operational KPIs, run AI-based analysis, and monitor overall business health from one executive screen.</p>
+<div class="about-card">
+<h4>CEO Module</h4>
+<p>Track commercial and operational KPIs, import executive Excel files, run AI-based analysis, and monitor overall business health from one executive screen.</p>
 </div>
-<div class="about-item">
-<h3>Finance Module</h3>
+<div class="about-card">
+<h4>Finance Module</h4>
 <p>Import Excel files, calculate financial statements, review mapping, and analyze the company’s financial position clearly.</p>
 </div>
-<div class="about-item">
-<h3>Analytics Module</h3>
+<div class="about-card">
+<h4>Analytics Module</h4>
 <p>View KPI charts, recommendations, strongest areas, weakest areas, and trend signals to support management decisions.</p>
 </div>
-<div class="about-item">
-<h3>Reports Module</h3>
-<p>Prepare structured reports with metrics, summaries, and later full charts and executive outputs for presentations and review.</p>
+<div class="about-card">
+<h4>Reports Module</h4>
+<p>Prepare structured reports with metrics, summaries, tables, and later full charts and executive outputs for presentations and review.</p>
 </div>
 </div>
-
 <p>The goal of this application is to give management a practical business intelligence tool that is easy to use, visually clear, and ready for presentation.</p>
-
 <div class="about-actions">
-<button type="button" onclick="enterApplication()">Enter Application</button>
-<button type="button" class="secondary-btn" onclick="logout()">Logout</button>
+<button id="enterAppBtn" type="button" onclick="enterApplication()">Enter Application</button>
+<button id="logoutBtn" type="button" onclick="logout()">Logout</button>
 </div>
 </div>
 </div>
-
 
 <div class="container">
 
 <aside class="sidebar">
-<div class="brand">Eissa</div>
+<div class="brand">Reap Service</div>
 <ul>
 <li class="side-link active-side" onclick="showView('executive')">CEO Dashboard</li>
 <li class="side-link" onclick="showView('analytics')">AI Analysis</li>
@@ -496,7 +495,7 @@ background:#111827;
 
 <div class="topbar">
 <div>
-<h1>Eissa KPI Dashboard</h1>
+<h1>Reap Service KPI Dashboard</h1>
 <p style="color:#93c5fd;margin-top:6px;">Business Intelligence System</p>
 </div>
 
@@ -619,6 +618,10 @@ background:#111827;
 
 <div class="section">
 <h2>Financial Results</h2>
+<div class="section">
+<h2>Finance Chart</h2>
+<canvas id="financeChart" height="120" style="max-height:320px;"></canvas>
+</div>
 
 <div class="cards">
 <div class="card"><h3>Gross Profit</h3><p id="grossProfit">0</p></div>
@@ -634,6 +637,22 @@ background:#111827;
 <div class="card"><h3>Quick Ratio</h3><p id="quickRatio">0</p></div>
 <div class="card"><h3>Debt to Equity</h3><p id="debtToEquity">0</p></div>
 <div class="card"><h3>ROA</h3><p id="roa">0%</p></div>
+</div>
+<div class="cards">
+<div class="card"><h3>Gross Margin</h3><p id="grossMargin">0%</p></div>
+<div class="card"><h3>Operating Margin</h3><p id="operatingMargin">0%</p></div>
+<div class="card"><h3>Net Margin</h3><p id="netMargin">0%</p></div>
+<div class="card"><h3>Debt Ratio</h3><p id="debtRatio">0</p></div>
+<div class="card"><h3>Working Capital</h3><p id="workingCapital">0</p></div>
+</div>
+<div class="section">
+<h2>Finance Insights</h2>
+<div class="summary-grid">
+<div class="summary-box"><h4>Cash Ratio</h4><p id="cashRatio">0</p></div>
+<div class="summary-box"><h4>ROE</h4><p id="roe">0%</p></div>
+<div class="summary-box"><h4>Asset Turnover</h4><p id="assetTurnover">0</p></div>
+<div class="summary-box"><h4>Finance Summary</h4><p id="financeAiSummary" style="font-size:15px;line-height:1.6;">Run financial analysis to view summary.</p></div>
+</div>
 </div>
 </div>
 </div>
@@ -711,12 +730,10 @@ let user=document.getElementById("email").value.trim();
 let pass=document.getElementById("password").value.trim();
 
 if(user=="admin" && pass=="1234"){
-
 document.getElementById("loginPage").style.display="none";
-showAboutPage();
+document.getElementById("aboutPage").style.display="block";
+document.querySelector(".container").style.display="none";
 localStorage.setItem("login","yes");
-showLogout();
-
 }else{
 document.getElementById("msg").innerText="Wrong Login Data";
 }
@@ -739,28 +756,23 @@ location.reload();
 
 }
 
-function showAboutPage(){
-document.getElementById("aboutStandalonePage").style.display="flex";
-document.querySelector(".container").style.display="none";
-}
-
-function enterApplication(){
-document.getElementById("aboutStandalonePage").style.display="none";
-document.querySelector(".container").style.display="grid";
-showView("executive");
-}
-
 window.onload=function(){
 
 if(localStorage.getItem("login")=="yes"){
 document.getElementById("loginPage").style.display="none";
-showAboutPage();
-showLogout();
-}else{
+document.getElementById("aboutPage").style.display="block";
 document.querySelector(".container").style.display="none";
-document.getElementById("aboutStandalonePage").style.display="none";
+}else{
+document.getElementById("aboutPage").style.display="none";
+document.querySelector(".container").style.display="none";
 }
 
+}
+
+function enterApplication(){
+document.getElementById("aboutPage").style.display="none";
+document.querySelector(".container").style.display="grid";
+showLogout();
 showView("executive");
 }
 
@@ -884,6 +896,7 @@ trend.classList.add("analytics-bad");
 }
 
 let chart;
+let financeChart;
 
 function drawChart(result){
 
@@ -916,102 +929,270 @@ backgroundColor:[
 });
 
 }
+function drawFinanceChart(){
+
+const revenue = Number(document.getElementById("fs_revenue")?.value || 0);
+const cogs = Number(document.getElementById("fs_cogs")?.value || 0);
+const grossProfit = Number(document.getElementById("grossProfit")?.innerText || 0);
+const netProfit = Number(document.getElementById("netProfit")?.innerText || 0);
+const totalAssets = Number(document.getElementById("totalAssets")?.innerText || 0);
+const equity = Number(document.getElementById("equity")?.innerText || 0);
+
+const canvas = document.getElementById("financeChart");
+if(!canvas) return;
+
+const ctx = canvas.getContext("2d");
+
+if(financeChart){
+    financeChart.destroy();
+}
+
+financeChart = new Chart(ctx,{
+    type:"bar",
+    data:{
+        labels:["Revenue","COGS","Gross Profit","Net Profit","Assets","Equity"],
+        datasets:[{
+            label:"Financial Overview",
+            data:[revenue,cogs,grossProfit,netProfit,totalAssets,equity],
+            backgroundColor:[
+                "rgba(34,211,238,0.75)",
+                "rgba(251,191,36,0.75)",
+                "rgba(74,222,128,0.75)",
+                "rgba(244,114,182,0.75)",
+                "rgba(96,165,250,0.75)",
+                "rgba(168,85,247,0.75)"
+            ],
+            borderWidth:1,
+            borderRadius:8
+        }]
+    },
+    options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+            legend:{
+                labels:{ color:"#e5eefc" }
+            }
+        },
+        scales:{
+            x:{
+                ticks:{ color:"#cbd5e1" },
+                grid:{ color:"rgba(255,255,255,0.06)" }
+            },
+            y:{
+                ticks:{ color:"#cbd5e1" },
+                grid:{ color:"rgba(255,255,255,0.06)" }
+            }
+        }
+    }
+});
+}
 
 function exportPDF(){
-const { jsPDF } = window.jspdf;
-const doc = new jsPDF();
+try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
 
-const company = document.getElementById("company_name").value || "My Company";
-const overall = document.getElementById("overallScore").innerText || "0";
-const sales = document.getElementById("salesScore").innerText || "0";
-const finance = document.getElementById("financeScore").innerText || "0";
-const operations = document.getElementById("operationsScore").innerText || "0";
-const inventory = document.getElementById("inventoryScore").innerText || "0";
-const reportDate = new Date().toLocaleString();
+    const company = document.getElementById("company_name")?.value || "My Company";
+    const overall = document.getElementById("overallScore")?.innerText || "0";
+    const sales = document.getElementById("salesScore")?.innerText || "0";
+    const finance = document.getElementById("financeScore")?.innerText || "0";
+    const operations = document.getElementById("operationsScore")?.innerText || "0";
+    const inventory = document.getElementById("inventoryScore")?.innerText || "0";
 
-doc.setFillColor(8,19,35);
-doc.rect(0,0,210,297,"F");
+    const grossProfit = document.getElementById("grossProfit")?.innerText || "0";
+    const operatingProfit = document.getElementById("operatingProfit")?.innerText || "0";
+    const netProfit = document.getElementById("netProfit")?.innerText || "0";
+    const totalAssets = document.getElementById("totalAssets")?.innerText || "0";
+    const equity = document.getElementById("equity")?.innerText || "0";
+    const netCashFlow = document.getElementById("netCashFlow")?.innerText || "0";
+    const currentRatio = document.getElementById("currentRatio")?.innerText || "0";
+    const quickRatio = document.getElementById("quickRatio")?.innerText || "0";
+    const debtToEquity = document.getElementById("debtToEquity")?.innerText || "0";
+    const roa = document.getElementById("roa")?.innerText || "0%";
 
-doc.setTextColor(34,211,238);
-doc.setFontSize(24);
-doc.text("Eissa Executive KPI Report", 20, 22);
+    const bestKpi = document.getElementById("bestKpi")?.innerText || "-";
+    const weakestKpi = document.getElementById("weakestKpi")?.innerText || "-";
+    const trendSignal = document.getElementById("trendSignal")?.innerText || "-";
+    const priorityMetric = document.getElementById("priorityMetric")?.innerText || "-";
 
-doc.setTextColor(220,240,255);
-doc.setFontSize(12);
-doc.text("Prepared by Ahmed Eissa", 20, 32);
-doc.text("Company: " + company, 20, 40);
-doc.text("Date: " + reportDate, 20, 48);
+    const reportDate = new Date().toLocaleString();
 
-doc.setDrawColor(60,130,180);
-doc.line(20, 55, 190, 55);
-
-doc.setFillColor(17,28,48);
-doc.roundedRect(20, 64, 170, 52, 4, 4, "F");
-
-doc.setTextColor(255,255,255);
-doc.setFontSize(16);
-doc.text("Performance Summary", 26, 76);
-
-doc.setFontSize(12);
-doc.text("Overall Score: " + overall, 30, 88);
-doc.text("Sales Score: " + sales, 30, 96);
-doc.text("Finance Score: " + finance, 30, 104);
-doc.text("Operations Score: " + operations, 110, 88);
-doc.text("Inventory Score: " + inventory, 110, 96);
-
-doc.setFillColor(17,28,48);
-doc.roundedRect(20, 125, 170, 26, 4, 4, "F");
-doc.setTextColor(34,211,238);
-doc.setFontSize(15);
-doc.text("CEO Insight", 26, 141);
-
-let insight = "Business performance requires continuous monitoring.";
-if(parseFloat(overall) >= 85){
-  insight = "Excellent business health with strong expansion potential.";
-}else if(parseFloat(overall) >= 60){
-  insight = "Stable performance, but some departments need attention.";
-}else{
-  insight = "Critical performance level. Immediate executive action is recommended.";
-}
-
-doc.setTextColor(230,240,255);
-doc.setFontSize(11);
-doc.text(insight, 85, 141, { maxWidth: 95 });
-
-doc.setFillColor(17,28,48);
-doc.roundedRect(20, 160, 170, 90, 4, 4, "F");
-
-doc.setTextColor(34,211,238);
-doc.setFontSize(15);
-doc.text("Recommendations", 26, 174);
-
-doc.setTextColor(255,255,255);
-doc.setFontSize(11);
-
-let y = 186;
-const items = document.querySelectorAll("#recommendationsList li");
-
-if(items.length > 0){
-  items.forEach((li)=>{
-    if(y < 240){
-      doc.text("- " + li.innerText, 30, y, { maxWidth: 150 });
-      y += 12;
+    function drawPageBackground(){
+        doc.setFillColor(7, 17, 32);
+        doc.rect(0, 0, 210, 297, "F");
     }
-  });
-}else{
-  doc.text("- No recommendations available.", 30, y);
+
+    function sectionTitle(text, y){
+        doc.setTextColor(34, 211, 238);
+        doc.setFontSize(20);
+        doc.text(text, 20, y);
+    }
+
+    function metricRow(label, value, y){
+        doc.setFillColor(15, 23, 42);
+        doc.roundedRect(20, y, 170, 16, 3, 3, "F");
+        doc.setTextColor(220, 235, 255);
+        doc.setFontSize(11);
+        doc.text(label, 26, y + 10);
+        doc.setTextColor(255, 255, 255);
+        doc.text(String(value), 145, y + 10);
+    }
+
+    // PAGE 1
+    drawPageBackground();
+
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(24);
+    doc.text("Reap Service Executive Board Report", 20, 22);
+
+    doc.setTextColor(230, 240, 255);
+    doc.setFontSize(12);
+    doc.text("Company: " + company, 20, 36);
+    doc.text("Date: " + reportDate, 20, 44);
+
+    doc.setDrawColor(60, 130, 180);
+    doc.line(20, 52, 190, 52);
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(20, 62, 170, 30, 4, 4, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.text("Overall KPI Score", 28, 75);
+    doc.setFontSize(28);
+    doc.text(String(overall), 150, 79);
+
+    sectionTitle("Executive KPI Snapshot", 108);
+
+    const cardData = [
+        ["Sales", sales, 20],
+        ["Finance", finance, 63],
+        ["Operations", operations, 106],
+        ["Inventory", inventory, 149]
+    ];
+
+    cardData.forEach(([label, value, x]) => {
+        doc.setFillColor(15, 23, 42);
+        doc.roundedRect(x, 116, 38, 28, 4, 4, "F");
+        doc.setTextColor(200, 220, 255);
+        doc.setFontSize(11);
+        doc.text(label, x + 4, 127);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.text(String(value), x + 4, 138);
+    });
+
+    sectionTitle("Management Notes", 162);
+    doc.setTextColor(230, 240, 255);
+    doc.setFontSize(11);
+    doc.text("- KPI analysis generated from the CEO dashboard.", 24, 174);
+    doc.text("- Financial results and chart included from the Finance module.", 24, 182);
+    doc.text("- Analytics insights and recommendations summarized for management.", 24, 190);
+
+    let verdict = "Management Attention Required";
+    if (Number(overall) >= 85) {
+        verdict = "Excellent Performance - Ready for Growth";
+    } else if (Number(overall) >= 70) {
+        verdict = "Stable Performance - Needs Optimization";
+    }
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(20, 212, 170, 30, 4, 4, "F");
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(14);
+    doc.text("Final Decision", 28, 225);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(verdict, 28, 236);
+
+    // PAGE 2
+    doc.addPage();
+    drawPageBackground();
+    sectionTitle("Financial Summary", 22);
+
+    let y = 40;
+    [
+        ["Gross Profit", grossProfit],
+        ["Operating Profit", operatingProfit],
+        ["Net Profit", netProfit],
+        ["Total Assets", totalAssets],
+        ["Equity", equity],
+        ["Net Cash Flow", netCashFlow],
+        ["Current Ratio", currentRatio],
+        ["Quick Ratio", quickRatio],
+        ["Debt to Equity", debtToEquity],
+        ["ROA", roa]
+    ].forEach(([label, value]) => {
+        metricRow(label, value, y);
+        y += 20;
+    });
+
+    // PAGE 3 - FINANCE CHART
+    const financeCanvas = document.getElementById("financeChart");
+    if (financeCanvas) {
+        doc.addPage();
+        drawPageBackground();
+        sectionTitle("Finance Chart", 22);
+
+        const chartImage = financeCanvas.toDataURL("image/png", 1.0);
+        doc.addImage(chartImage, "PNG", 15, 35, 180, 95);
+
+        sectionTitle("Finance Commentary", 150);
+        doc.setTextColor(230, 240, 255);
+        doc.setFontSize(11);
+        doc.text("- Revenue vs COGS and profitability are visualized in the finance chart.", 20, 164);
+        doc.text("- Assets and equity provide a quick view of financial position.", 20, 172);
+        doc.text("- Use this page in management meetings for fast financial review.", 20, 180);
+    }
+
+    // PAGE 4 - ANALYTICS
+    doc.addPage();
+    drawPageBackground();
+    sectionTitle("Analytics & Recommendations", 22);
+
+    const items = Array.from(document.querySelectorAll("#recommendationsList li")).map(li => li.innerText.trim());
+    doc.setTextColor(230, 240, 255);
+    doc.setFontSize(11);
+
+    let recY = 42;
+    if (items.length) {
+        items.forEach(item => {
+            doc.text("- " + item, 24, recY, { maxWidth: 160 });
+            recY += 14;
+        });
+    } else {
+        doc.text("- No recommendations available.", 24, recY);
+    }
+
+    sectionTitle("Analytics Summary", 150);
+    let ay = 164;
+    [
+        ["Best KPI", bestKpi],
+        ["Weakest KPI", weakestKpi],
+        ["Trend", trendSignal],
+        ["Priority", priorityMetric]
+    ].forEach(([label, value]) => {
+        metricRow(label, value, ay);
+        ay += 20;
+    });
+
+    // PAGE 5 - MAIN KPI CHART
+    const mainChartCanvas = document.getElementById("chart1");
+    if (mainChartCanvas) {
+        doc.addPage();
+        drawPageBackground();
+        sectionTitle("KPI Performance Chart", 22);
+        const mainChartImage = mainChartCanvas.toDataURL("image/png", 1.0);
+        doc.addImage(mainChartImage, "PNG", 15, 35, 180, 100);
+    }
+
+    doc.save("Reap Service_Full_Board_Report.pdf");
+} catch (error) {
+    console.error(error);
+    alert("PDF export failed. Check console.");
+}
 }
 
-doc.setDrawColor(80,100,130);
-doc.line(20, 270, 190, 270);
-
-doc.setTextColor(160,180,200);
-doc.setFontSize(10);
-doc.text("Signature: ____________________", 20, 280);
-doc.text("Powered by Eissa KPI Dashboard", 120, 280);
-
-doc.save("Eissa_Premium_Executive_Report.pdf");
-}
 
 function fval(id){
 return parseFloat(document.getElementById(id).value) || 0;
@@ -1060,6 +1241,31 @@ document.getElementById("quickRatio").innerText = quickRatio;
 document.getElementById("debtToEquity").innerText = debtToEquity;
 document.getElementById("roa").innerText = roa + "%";
 
+const grossMargin = revenue !== 0 ? ((grossProfit / revenue) * 100).toFixed(2) : "0.00";
+const operatingMargin = revenue !== 0 ? ((operatingProfit / revenue) * 100).toFixed(2) : "0.00";
+const netMargin = revenue !== 0 ? ((netProfit / revenue) * 100).toFixed(2) : "0.00";
+const debtRatio = totalAssets !== 0 ? (totalLiabilities / totalAssets).toFixed(2) : "0";
+const workingCapital = (currentAssets - currentLiabilities).toFixed(2);
+const cashRatio = currentLiabilities !== 0 ? (cashIn / currentLiabilities).toFixed(2) : "0";
+const roe = equity !== 0 ? ((netProfit / equity) * 100).toFixed(2) : "0";
+const assetTurnover = totalAssets !== 0 ? (revenue / totalAssets).toFixed(2) : "0";
+
+document.getElementById("grossMargin").innerText = grossMargin + "%";
+document.getElementById("operatingMargin").innerText = operatingMargin + "%";
+document.getElementById("netMargin").innerText = netMargin + "%";
+document.getElementById("debtRatio").innerText = debtRatio;
+document.getElementById("workingCapital").innerText = workingCapital;
+document.getElementById("cashRatio").innerText = cashRatio;
+document.getElementById("roe").innerText = roe + "%";
+document.getElementById("assetTurnover").innerText = assetTurnover;
+
+let financeSummary = "Balanced finance position.";
+if (Number(netMargin) < 10) financeSummary = "Profitability is weak and needs cost control.";
+if (Number(currentRatio) < 1) financeSummary = "Liquidity is weak and short-term obligations need attention.";
+if (Number(debtToEquity) > 2) financeSummary = "Leverage is high and debt structure should be reviewed.";
+document.getElementById("financeAiSummary").innerText = financeSummary;
+
+drawFinanceChart();
 syncTable();
 }
 
@@ -1078,7 +1284,7 @@ return el ? el.innerText : "";
 let wb = XLSX.utils.book_new();
 
 let summary = [
-["Eissa KPI Dashboard"],
+["Reap Service KPI Dashboard"],
 [""],
 ["Report Date", new Date().toLocaleString()],
 ["Gross Profit", txt("grossProfit")],
@@ -1114,7 +1320,7 @@ let data = [
 let ws2 = XLSX.utils.aoa_to_sheet(data);
 XLSX.utils.book_append_sheet(wb, ws2, "Statements");
 
-XLSX.writeFile(wb, "Eissa_Financial_Report.xlsx");
+XLSX.writeFile(wb, "Reap Service_Financial_Report.xlsx");
 }
 
 function showView(view){
