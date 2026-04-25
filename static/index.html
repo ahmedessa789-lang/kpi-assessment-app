@@ -263,9 +263,10 @@ position:relative;
 z-index:2;
 background:linear-gradient(180deg, rgba(15,23,42,.78), rgba(2,6,23,.86));
 backdrop-filter:blur(18px);
-padding:42px 38px;
-width:390px;
+padding:22px 26px;
+width:190px;
 max-width:92vw;
+min-height:86px;
 border-radius:26px;
 border:1px solid rgba(148,163,184,.16);
 box-shadow:
@@ -273,6 +274,70 @@ box-shadow:
 0 24px 55px rgba(0,0,0,.38),
 inset 0 1px 0 rgba(255,255,255,.08);
 animation:loginCardIn .7s ease both;
+overflow:hidden;
+transition:width .45s ease, padding .45s ease, min-height .45s ease, box-shadow .45s ease, transform .35s ease;
+}
+
+.login-box:hover,
+.login-box:focus-within,
+.login-box.open{
+width:390px;
+min-height:430px;
+padding:42px 38px;
+box-shadow:
+0 0 60px rgba(34,211,238,.18),
+0 28px 65px rgba(0,0,0,.42),
+inset 0 1px 0 rgba(255,255,255,.10);
+transform:translateY(-2px);
+}
+
+.login-closed-title{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+height:42px;
+font-weight:900;
+letter-spacing:1px;
+color:#e0faff;
+text-transform:uppercase;
+text-shadow:0 0 16px rgba(34,211,238,.38);
+transition:opacity .25s ease, transform .25s ease, height .25s ease, margin .25s ease;
+}
+
+.login-closed-title span{
+width:10px;
+height:10px;
+border-radius:50%;
+background:#22d3ee;
+box-shadow:0 0 16px rgba(34,211,238,.85);
+}
+
+.login-box:hover .login-closed-title,
+.login-box:focus-within .login-closed-title,
+.login-box.open .login-closed-title{
+opacity:0;
+height:0;
+margin:0;
+transform:translateY(-8px);
+pointer-events:none;
+}
+
+.login-expanded{
+opacity:0;
+max-height:0;
+transform:translateY(12px);
+transition:opacity .35s ease .08s, transform .35s ease .08s, max-height .45s ease;
+pointer-events:none;
+}
+
+.login-box:hover .login-expanded,
+.login-box:focus-within .login-expanded,
+.login-box.open .login-expanded{
+opacity:1;
+max-height:520px;
+transform:translateY(0);
+pointer-events:auto;
 }
 
 .login-mark{
@@ -341,6 +406,14 @@ text-align:center;
 font-size:12px;
 color:#64748b;
 }
+
+@media(max-width:700px){
+.login-box{width:190px;}
+.login-box:hover,
+.login-box:focus-within,
+.login-box.open{width:340px;min-height:430px;padding:36px 28px;}
+}
+
 
 @keyframes loginCardIn{
 from{opacity:0;transform:translateY(18px) scale(.98);}
@@ -648,18 +721,21 @@ border-top:1px solid rgba(148,163,184,.10);
 <div class="login-graphics" aria-hidden="true">
 <span></span><span></span><span></span><span></span><span></span>
 </div>
-<div class="login-box">
+<div class="login-box" id="loginBox">
+<div class="login-closed-title"><span></span>LOGIN</div>
+<div class="login-expanded">
 <div class="login-mark">RS</div>
 <h2>Reap Service Login</h2>
 <p class="login-subtitle">Secure Business Intelligence Access</p>
 
-<input type="text" id="email" placeholder="Username">
-<input type="password" id="password" placeholder="Password">
+<input type="text" id="email" placeholder="Username" autocomplete="username">
+<input type="password" id="password" placeholder="Password" autocomplete="current-password">
 
-<button onclick="login()">Login Securely</button>
+<button type="button" onclick="login()">Login Securely</button>
 
 <p id="msg"></p>
 <div class="login-footer">Protected KPI Dashboard</div>
+</div>
 </div>
 </div>
 
@@ -1020,6 +1096,35 @@ throw new Error("Forbidden");
 }
 return response;
 }
+function openLoginBox(){
+const box = document.getElementById("loginBox");
+if(box) box.classList.add("open");
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+const loginBox = document.getElementById("loginBox");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+
+if(loginBox){
+loginBox.addEventListener("mouseenter", openLoginBox);
+loginBox.addEventListener("click", function(){
+openLoginBox();
+setTimeout(() => emailInput?.focus(), 180);
+});
+}
+
+[emailInput, passwordInput].forEach(input => {
+if(!input) return;
+input.addEventListener("keydown", function(e){
+if(e.key === "Enter"){
+e.preventDefault();
+login();
+}
+});
+});
+});
+
 async function login(){
 const user = document.getElementById("email").value.trim();
 const pass = document.getElementById("password").value.trim();
