@@ -572,6 +572,7 @@ border-top:1px solid rgba(148,163,184,.10);
 <li class="side-link" onclick="showView('analytics')">AI Analysis</li>
 <li class="side-link" onclick="showView('finance')">Finance</li>
 <li class="side-link" onclick="showView('table')">Reports Table</li>
+<li class="side-link" id="usersSideLink" onclick="showView('users')">Users Management</li>
 </ul>
 </aside>
 
@@ -591,6 +592,7 @@ border-top:1px solid rgba(148,163,184,.10);
 <button class="view-btn" data-view="finance" onclick="showView('finance')">Finance</button>
 <button class="view-btn" data-view="analytics" onclick="showView('analytics')">Analytics</button>
 <button class="view-btn" data-view="table" onclick="showView('table')">Table</button>
+<button class="view-btn" id="usersViewBtn" data-view="users" onclick="showView('users')">Users</button>
 </div>
 
 <div id="executiveView" class="dashboard-view">
@@ -821,10 +823,67 @@ border-top:1px solid rgba(148,163,184,.10);
 </div>
 </div>
 
+<div id="usersView" class="dashboard-view hidden-view">
+<div class="section">
+<h2>Create User Account</h2>
+<div class="form-grid">
+<input type="text" id="new_full_name" placeholder="Full Name">
+<input type="text" id="new_username" placeholder="Username">
+<input type="password" id="new_password" placeholder="Password">
+<select id="new_role">
+<option value="Admin">Admin</option>
+<option value="Manager">Manager</option>
+<option value="Finance">Finance</option>
+<option value="Employee">Employee</option>
+</select>
+</div>
+<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+<button type="button" onclick="createUserAccount()">Create User</button>
+<button type="button" onclick="loadUsersList()">Refresh Users</button>
+</div>
+<p id="usersMsg" style="margin-top:12px;color:#93c5fd;min-height:20px;"></p>
+</div>
+
+<div class="section">
+<h2>Users List</h2>
+<table class="pro-table">
+<thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th></tr></thead>
+<tbody id="usersTableBody"><tr><td colspan="5">No users loaded yet.</td></tr></tbody>
+</table>
+</div>
+</div>
+
 </main>
 </div>
 
 <script>
+function getAuthToken(){
+return localStorage.getItem("authToken") || "";
+}
+function authHeaders(extraHeaders = {}){
+const token = getAuthToken();
+return {
+...extraHeaders,
+...(token ? { "Authorization": "Bearer " + token, "X-Auth-Token": token } : {})
+};
+}
+async function apiFetch(url, options = {}){
+const headers = authHeaders(options.headers || {});
+const response = await fetch(url, { ...options, headers });
+if(response.status === 401){
+localStorage.removeItem("login");
+localStorage.removeItem("userData");
+localStorage.removeItem("authToken");
+alert("Session expired. Please login again.");
+location.reload();
+throw new Error("Unauthorized");
+}
+if(response.status === 403){
+alert("You do not have permission to access this action.");
+throw new Error("Forbidden");
+}
+return response;
+}
 async function login(){
 const user = document.getElementById("email").value.trim();
 const pass = document.getElementById("password").value.trim();
@@ -844,7 +903,8 @@ body: JSON.stringify({ username: user, password: pass })
 
 const result = await response.json();
 
-if(result.success && result.user){
+if(result.success && result.user && result.token){
+localStorage.setItem("authToken", result.token);
 document.getElementById("loginPage").style.display="none";
 document.getElementById("aboutPage").style.display="block";
 document.querySelector(".container").style.display="none";
@@ -901,7 +961,7 @@ const normalizedRole = String(role || "").toLowerCase().trim();
 const sideLinks = document.querySelectorAll(".side-link");
 
 const allowView = (name, allowed) => {
-const sideMap = { executive:0, analytics:1, finance:2, table:3 };
+const sideMap = { executive:0, analytics:1, finance:2, table:3, users:4 };
 const viewBtn = document.querySelector(`.view-btn[data-view="${name}"]`);
 const sideLink = sideLinks[sideMap[name]];
 if(viewBtn) viewBtn.style.display = allowed ? "inline-block" : "none";
@@ -929,6 +989,7 @@ allowView("executive", false);
 allowView("analytics", false);
 allowView("finance", true);
 allowView("table", false);
+allowView("users", false);
 toggleCEOImport(false);
 toggleFinanceActions(true);
 }else if(normalizedRole === "employee"){
@@ -936,41 +997,60 @@ allowView("executive", true);
 allowView("analytics", true);
 allowView("finance", false);
 allowView("table", false);
+allowView("users", false);
 toggleCEOImport(false);
 toggleFinanceActions(false);
 }else if(normalizedRole === "manager" || normalizedRole === "general manager"){
 allowView("executive", true);
 allowView("analytics", true);
-allowView("finance", true);
+allowView("finance", false);
 allowView("table", true);
+allowView("users", false);
 toggleCEOImport(true);
-toggleFinanceActions(true);
+toggleFinanceActions(false);
 }else{
 allowView("executive", true);
 allowView("analytics", true);
 allowView("finance", true);
 allowView("table", true);
+allowView("users", true);
 toggleCEOImport(true);
 toggleFinanceActions(true);
 }
 }
 
-function logout(){
+async function logout(){
+try{
+if(getAuthToken()){
+await apiFetch("/logout", { method:"POST" });
+}
+}catch(error){ console.warn(error); }
 localStorage.removeItem("login");
 localStorage.removeItem("userData");
+localStorage.removeItem("authToken");
 location.reload();
 }
 
-window.onload=function(){
+window.onload=async function(){
 const currentUser = getCurrentUser();
-
-if(localStorage.getItem("login")=="yes" && currentUser){
+const token = getAuthToken();
+if(localStorage.getItem("login")=="yes" && currentUser && token){
+try{
+const meResponse = await apiFetch("/me");
+const meResult = await meResponse.json();
+if(meResult.success && meResult.user){
+localStorage.setItem("userData", JSON.stringify(meResult.user));
+}
+}catch(error){ return; }
 document.getElementById("loginPage").style.display="none";
 document.getElementById("aboutPage").style.display="block";
 document.querySelector(".container").style.display="none";
 showUserBadge();
-applyRolePermissions(currentUser.role);
+applyRolePermissions(getCurrentUser()?.role);
 }else{
+localStorage.removeItem("login");
+localStorage.removeItem("userData");
+localStorage.removeItem("authToken");
 document.getElementById("aboutPage").style.display="none";
 document.querySelector(".container").style.display="none";
 document.getElementById("topRight").innerHTML = `<div class="live">● LIVE</div>`;
@@ -1029,7 +1109,7 @@ out_of_stock_cases: val("out_of_stock_cases"),
 total_sku_requests: val("total_sku_requests")
 };
 
-let response=await fetch("/kpi/calculate",{
+let response=await apiFetch("/kpi/calculate",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify(payload)
@@ -1540,7 +1620,7 @@ XLSX.writeFile(wb, "Reap Service_Financial_Report.xlsx");
 }
 
 function showView(view){
-const views = ["executive","finance","analytics","table"];
+const views = ["executive","finance","analytics","table","users"];
 
 views.forEach(v=>{
 const el = document.getElementById(v + "View");
@@ -1573,8 +1653,10 @@ if(view === "executive") document.querySelectorAll(".side-link")[0]?.classList.a
 if(view === "analytics") document.querySelectorAll(".side-link")[1]?.classList.add("active-side");
 if(view === "finance") document.querySelectorAll(".side-link")[2]?.classList.add("active-side");
 if(view === "table") document.querySelectorAll(".side-link")[3]?.classList.add("active-side");
+if(view === "users") document.querySelectorAll(".side-link")[4]?.classList.add("active-side");
 
 syncTable();
+if(view === "users") loadUsersList();
 }
 
 function syncTable(){
@@ -1610,7 +1692,7 @@ async function importCEOExcel() {
     formData.append("file", fileInput.files[0]);
 
     try {
-        const response = await fetch("/import-ceo-file", {
+        const response = await apiFetch("/upload-ceo", {
             method: "POST",
             body: formData
         });
@@ -1717,7 +1799,7 @@ async function importExcel() {
     formData.append("file", fileInput.files[0]);
 
     try {
-        const response = await fetch("/upload-finance", {
+        const response = await apiFetch("/upload-finance", {
             method: "POST",
             body: formData
         });
@@ -1846,6 +1928,64 @@ async function importExcel() {
         console.error(error);
         alert("Upload failed");
     }
+}
+
+async function loadUsersList(){
+const user = getCurrentUser();
+if(String(user?.role || "").toLowerCase() !== "admin") return;
+const body = document.getElementById("usersTableBody");
+if(!body) return;
+body.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
+try{
+const response = await apiFetch("/users/list");
+const result = await response.json();
+const users = result.users || [];
+body.innerHTML = users.length ? users.map(u => `
+<tr>
+<td>${u.fullName || "-"}</td>
+<td>${u.username || "-"}</td>
+<td>${u.role || "-"}</td>
+<td>${u.isActive ? "Active" : "Inactive"}</td>
+<td>${u.createdAt || "-"}</td>
+</tr>`).join("") : `<tr><td colspan="5">No users found.</td></tr>`;
+}catch(error){
+console.error(error);
+body.innerHTML = `<tr><td colspan="5">Failed to load users.</td></tr>`;
+}
+}
+async function createUserAccount(){
+const msg = document.getElementById("usersMsg");
+const payload = {
+full_name: document.getElementById("new_full_name")?.value.trim() || "",
+username: document.getElementById("new_username")?.value.trim() || "",
+password: document.getElementById("new_password")?.value.trim() || "",
+role: document.getElementById("new_role")?.value || "Employee"
+};
+if(!payload.full_name || !payload.username || !payload.password){
+if(msg) msg.innerText = "Please fill full name, username, and password.";
+return;
+}
+try{
+const response = await apiFetch("/users", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(payload)
+});
+const result = await response.json();
+if(msg){
+msg.style.color = result.success ? "#4ade80" : "#fb7185";
+msg.innerText = result.message || (result.success ? "User created successfully" : "User creation failed");
+}
+if(result.success){
+document.getElementById("new_full_name").value = "";
+document.getElementById("new_username").value = "";
+document.getElementById("new_password").value = "";
+loadUsersList();
+}
+}catch(error){
+console.error(error);
+if(msg){ msg.style.color = "#fb7185"; msg.innerText = "User creation failed."; }
+}
 }
 
 </script>
