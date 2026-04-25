@@ -42,12 +42,26 @@ transition:.25s ease;
 }
 
 .brand{
+display:flex;
+align-items:center;
+gap:12px;
 font-size:30px;
 font-weight:800;
 color:#67e8f9;
 margin-bottom:30px;
 text-shadow:0 0 18px rgba(103,232,249,.35);
 letter-spacing:.5px;
+}
+
+.logo{
+width:44px;
+height:44px;
+object-fit:contain;
+border-radius:8px;
+background:rgba(255,255,255,.96);
+padding:4px;
+box-shadow:0 8px 18px rgba(0,0,0,.18);
+flex-shrink:0;
 }
 
 .sidebar ul{
@@ -226,11 +240,42 @@ min-height:20px;
 }
 
 #logoutBtn{
-background:linear-gradient(90deg,#f43f5e,#fb7185);
+background:linear-gradient(90deg,#0ea5e9,#2563eb);
 color:white;
 padding:10px 16px;
-border-radius:10px;
-box-shadow:none;
+border-radius:12px;
+font-weight:700;
+border:1px solid rgba(255,255,255,.08);
+box-shadow:0 8px 18px rgba(37,99,235,.18);
+transition:.25s ease;
+}
+
+#logoutBtn:hover{
+transform:translateY(-1px);
+box-shadow:0 10px 22px rgba(37,99,235,.28);
+}
+
+.user-badge{
+display:flex;
+align-items:center;
+gap:10px;
+padding:10px 14px;
+border-radius:14px;
+background:rgba(15,23,42,.92);
+border:1px solid rgba(148,163,184,.12);
+box-shadow:0 8px 18px rgba(0,0,0,.14);
+}
+
+.user-badge strong{
+display:block;
+font-size:13px;
+color:#f8fafc;
+}
+
+.user-badge span{
+display:block;
+font-size:12px;
+color:#93c5fd;
 }
 
 .cards .card:nth-child(1){border:1px solid rgba(56,189,248,.28);}
@@ -377,6 +422,31 @@ color:#dbeafe;
 margin-bottom:18px;
 }
 
+.about-logo-wrap{
+text-align:center;
+margin-bottom:20px;
+margin-top:5px;
+}
+
+
+.about-logo{
+width:260px;
+max-width:85%;
+height:auto;
+display:inline-block;
+object-fit:contain;
+background:transparent;
+padding:0;
+border:none;
+border-radius:0;
+box-shadow:none;
+filter:drop-shadow(0 6px 12px rgba(0,0,0,.18));
+}
+
+.about-logo:hover{
+transform:scale(1.02);
+}
+
 .about-grid{
 display:grid;
 grid-template-columns:repeat(2,1fr);
@@ -423,6 +493,16 @@ padding:14px 22px;
 font-size:16px;
 }
 
+.credit{
+text-align:center;
+margin-top:30px;
+color:#94a3b8;
+font-size:14px;
+letter-spacing:.4px;
+padding-top:18px;
+border-top:1px solid rgba(148,163,184,.10);
+}
+
 @media(max-width:1000px){
 .about-grid{grid-template-columns:1fr;}
 .about-shell{padding:28px;}
@@ -449,6 +529,9 @@ font-size:16px;
 
 <div id="aboutPage">
 <div class="about-shell">
+<div class="about-logo-wrap">
+
+</div>
 <div class="about-eyebrow">About App</div>
 <h1>Reap Service KPI Dashboard</h1>
 <p>This application helps management review business performance through KPI analysis, financial statement review, automated Excel import, visual charts, and executive reporting in one place.</p>
@@ -476,13 +559,14 @@ font-size:16px;
 <button id="enterAppBtn" type="button" onclick="enterApplication()">Enter Application</button>
 <button id="logoutBtn" type="button" onclick="logout()">Logout</button>
 </div>
+<p class="credit">Digital Solution by Ahmed Eissa</p>
 </div>
 </div>
 
 <div class="container">
 
 <aside class="sidebar">
-<div class="brand">Reap Service</div>
+<div class="brand"><span>Reap Service</span></div>
 <ul>
 <li class="side-link active-side" onclick="showView('executive')">CEO Dashboard</li>
 <li class="side-link" onclick="showView('analytics')">AI Analysis</li>
@@ -499,9 +583,7 @@ font-size:16px;
 <p style="color:#93c5fd;margin-top:6px;">Business Intelligence System</p>
 </div>
 
-<div id="topRight">
-<div class="live">● LIVE</div>
-</div>
+<div id="topRight"></div>
 </div>
 
 <div class="view-switcher">
@@ -743,56 +825,171 @@ font-size:16px;
 </div>
 
 <script>
-function login(){
+async function login(){
+const user = document.getElementById("email").value.trim();
+const pass = document.getElementById("password").value.trim();
+const msg = document.getElementById("msg");
 
-let user=document.getElementById("email").value.trim();
-let pass=document.getElementById("password").value.trim();
+if(!user || !pass){
+msg.innerText = "Please enter username and password";
+return;
+}
 
-if(user=="admin" && pass=="1234"){
+try{
+const response = await fetch("/login", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({ username: user, password: pass })
+});
+
+const result = await response.json();
+
+if(result.success && result.user){
 document.getElementById("loginPage").style.display="none";
 document.getElementById("aboutPage").style.display="block";
 document.querySelector(".container").style.display="none";
 localStorage.setItem("login","yes");
+localStorage.setItem("userData", JSON.stringify(result.user));
+msg.innerText = "";
+showUserBadge();
+applyRolePermissions(result.user.role);
 }else{
-document.getElementById("msg").innerText="Wrong Login Data";
+msg.innerText = result.message || "Wrong Login Data";
+}
+}catch(error){
+console.error(error);
+msg.innerText = "Login failed. Please try again.";
+}
 }
 
+function getCurrentUser(){
+try{
+return JSON.parse(localStorage.getItem("userData") || "null");
+}catch(error){
+return null;
+}
 }
 
-function showLogout(){
+function showUserBadge(){
+const topRight = document.getElementById("topRight");
+const user = getCurrentUser();
 
-document.getElementById("topRight").innerHTML=
+if(!topRight) return;
+
+if(!user){
+topRight.innerHTML = `<div class="live">● LIVE</div>`;
+return;
+}
+
+topRight.innerHTML =
 `
-<button id="logoutBtn" onclick="logout()">Logout</button>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div class="live">● LIVE</div>
+  <div class="user-badge">
+    <div>
+      <strong>${user.fullName || user.username}</strong>
+      <span>${user.role || "User"}</span>
+    </div>
+  </div>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+</div>
 `;
+}
 
+function applyRolePermissions(role){
+const normalizedRole = String(role || "").toLowerCase().trim();
+const sideLinks = document.querySelectorAll(".side-link");
+
+const allowView = (name, allowed) => {
+const sideMap = { executive:0, analytics:1, finance:2, table:3 };
+const viewBtn = document.querySelector(`.view-btn[data-view="${name}"]`);
+const sideLink = sideLinks[sideMap[name]];
+if(viewBtn) viewBtn.style.display = allowed ? "inline-block" : "none";
+if(sideLink) sideLink.style.display = allowed ? "block" : "none";
+};
+
+const toggleCEOImport = (allowed) => {
+const ceoFile = document.getElementById("ceoExcelFile");
+const ceoBtn = ceoFile ? ceoFile.nextElementSibling : null;
+if(ceoFile) ceoFile.style.display = allowed ? "inline-block" : "none";
+if(ceoBtn) ceoBtn.style.display = allowed ? "inline-block" : "none";
+};
+
+const toggleFinanceActions = (allowed) => {
+const financeFile = document.getElementById("excelFile");
+const financeImportBtn = financeFile ? financeFile.nextElementSibling : null;
+const financeExportBtn = financeImportBtn ? financeImportBtn.nextElementSibling : null;
+if(financeFile) financeFile.style.display = allowed ? "inline-block" : "none";
+if(financeImportBtn) financeImportBtn.style.display = allowed ? "inline-block" : "none";
+if(financeExportBtn) financeExportBtn.style.display = allowed ? "inline-block" : "none";
+};
+
+if(normalizedRole === "finance"){
+allowView("executive", false);
+allowView("analytics", false);
+allowView("finance", true);
+allowView("table", false);
+toggleCEOImport(false);
+toggleFinanceActions(true);
+}else if(normalizedRole === "employee"){
+allowView("executive", true);
+allowView("analytics", true);
+allowView("finance", false);
+allowView("table", false);
+toggleCEOImport(false);
+toggleFinanceActions(false);
+}else if(normalizedRole === "manager" || normalizedRole === "general manager"){
+allowView("executive", true);
+allowView("analytics", true);
+allowView("finance", true);
+allowView("table", true);
+toggleCEOImport(true);
+toggleFinanceActions(true);
+}else{
+allowView("executive", true);
+allowView("analytics", true);
+allowView("finance", true);
+allowView("table", true);
+toggleCEOImport(true);
+toggleFinanceActions(true);
+}
 }
 
 function logout(){
-
 localStorage.removeItem("login");
+localStorage.removeItem("userData");
 location.reload();
-
 }
 
 window.onload=function(){
+const currentUser = getCurrentUser();
 
-if(localStorage.getItem("login")=="yes"){
+if(localStorage.getItem("login")=="yes" && currentUser){
 document.getElementById("loginPage").style.display="none";
 document.getElementById("aboutPage").style.display="block";
 document.querySelector(".container").style.display="none";
+showUserBadge();
+applyRolePermissions(currentUser.role);
 }else{
 document.getElementById("aboutPage").style.display="none";
 document.querySelector(".container").style.display="none";
+document.getElementById("topRight").innerHTML = `<div class="live">● LIVE</div>`;
 }
-
 }
 
 function enterApplication(){
+const currentUser = getCurrentUser();
 document.getElementById("aboutPage").style.display="none";
 document.querySelector(".container").style.display="grid";
-showLogout();
+showUserBadge();
+applyRolePermissions(currentUser?.role);
+
+const normalizedRole = String(currentUser?.role || "").toLowerCase().trim();
+if(normalizedRole === "finance"){
+showView("finance");
+}else{
 showView("executive");
+}
 }
 
 function val(id){

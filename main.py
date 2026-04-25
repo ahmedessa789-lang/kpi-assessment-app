@@ -3,11 +3,13 @@ import re
 import math
 import shutil
 import sqlite3
-from datetime import datetime
-from typing import Optional, Dict, List, Any
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List, Any, Tuple
 
 import pandas as pd
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -241,24 +243,11 @@ def detect_ceo_data(df: pd.DataFrame) -> Dict[str, Any]:
     return result
 
 
-
-def load_tabular_data_flexible(file_path: str, keyword_dict: Dict[str, List[str]]):
-    extension = os.path.splitext(file_path)[1].lower()
-
-    if extension == ".csv":
-        df = pd.read_csv(file_path)
-        sheet_used = "CSV File"
-    else:
-        excel_file = pd.ExcelFile(file_path)
-        sheet_used = find_best_sheet_generic(excel_file, keyword_dict)
-        df = pd.read_excel(excel_file, sheet_name=sheet_used)
-
-    df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
-    return df, sheet_used
-
-
 def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
-    df, best_sheet = load_tabular_data_flexible(file_path, FINANCE_KEYWORDS)
+    excel_file = pd.ExcelFile(file_path)
+    best_sheet = find_best_sheet_generic(excel_file, FINANCE_KEYWORDS)
+    df = pd.read_excel(excel_file, sheet_name=best_sheet)
+    df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
 
     finance_data = detect_finance_data(df)
     finance_data["sheet_used"] = best_sheet
@@ -267,29 +256,66 @@ def read_finance_excel_flexible(file_path: str) -> Dict[str, Any]:
 
 
 def read_ceo_excel_flexible(file_path: str) -> Dict[str, Any]:
-    df, best_sheet = load_tabular_data_flexible(file_path, CEO_KEYWORDS)
+    excel_file = pd.ExcelFile(file_path)
+    best_sheet = find_best_sheet_generic(excel_file, CEO_KEYWORDS)
+    df = pd.read_excel(excel_file, sheet_name=best_sheet)
+    df = df.dropna(axis=0, how="all").dropna(axis=1, how="all")
 
     ceo_data = detect_ceo_data(df)
     ceo_data["sheet_used"] = best_sheet
     ceo_data["columns_found_in_sheet"] = [str(col) for col in df.columns]
-    ceo_data["auto_fill_fields"] = {
-        "current_revenue": round(float(ceo_data.get("revenue", 0) or 0), 2),
-        "leads_count": int(round(float(ceo_data.get("leads", 0) or 0))),
-        "orders_count": int(round(float(ceo_data.get("orders", 0) or 0))),
-        "total_expenses": round(float(ceo_data.get("expenses", 0) or 0), 2),
-        "average_inventory": round(float(ceo_data.get("inventory", 0) or 0), 2),
-        "cash_in": round(float(ceo_data.get("cash", 0) or 0), 2),
-    }
     return ceo_data
 
 
-app = FastAPI(title="KPI Assessment API", version="2.0.0")
+DB_PATH = "kpi.db"
+
+
+def get_db_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    return hash_password(password) == stored_hash
+
+
+def seed_default_users() -> None:
+    default_users: List[Tuple[str, str, str, str]] = [
+        ("admin", hash_password("1234"), "Admin", "Ahmed Eissa"),
+        ("manager", hash_password("1234"), "Manager", "Mohamed Karam"),
+        ("finance", hash_password("1234"), "Finance", "Mohamed Elamir"),
+    ]
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    for username, password_hash, role, full_name in default_users:
+        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        existing = cursor.fetchone()
+        if not existing:
+            cursor.execute(
+                """
+                INSERT INTO users (username, password_hash, role, full_name, is_active, created_at)
+                VALUES (?, ?, ?, ?, 1, ?)
+                """,
+                (username, password_hash, role, full_name, datetime.now().isoformat()),
+            )
+    conn.commit()
+    conn.close()
+
+
+app = FastAPI(title="KPI Assessment API", version="2.0.0", docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 def init_db() -> None:
-    conn = sqlite3.connect("kpi.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS assessments (
@@ -301,8 +327,38 @@ def init_db() -> None:
         )
         """
     )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT
+        )
+        """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token TEXT UNIQUE NOT NULL,
+            username TEXT NOT NULL,
+            role TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
     conn.commit()
     conn.close()
+    seed_default_users()
 
 
 init_db()
@@ -368,6 +424,100 @@ class LoginInput(BaseModel):
     password: str
 
 
+class UserCreateInput(BaseModel):
+    username: str
+    password: str
+    role: str
+    full_name: str
+
+
+
+SESSION_HOURS = 8
+
+
+def normalize_role(role: str) -> str:
+    role_clean = (role or "").strip().lower()
+    if role_clean == "admin":
+        return "Admin"
+    if role_clean == "finance":
+        return "Finance"
+    if role_clean == "manager":
+        return "Manager"
+    if role_clean == "employee":
+        return "Employee"
+    return role.strip().title()
+
+
+def create_session_token(username: str, role: str, full_name: str) -> str:
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now() + timedelta(hours=SESSION_HOURS)).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO sessions (token, username, role, full_name, expires_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (token, username, normalize_role(role), full_name, expires_at, datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+    return token
+
+
+def get_current_user(
+    authorization: Optional[str] = Header(default=None),
+    x_auth_token: Optional[str] = Header(default=None),
+) -> Dict[str, Any]:
+    token = x_auth_token
+
+    if authorization:
+        parts = authorization.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Login required")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT token, username, role, full_name, expires_at
+        FROM sessions
+        WHERE token = ?
+        """,
+        (token,),
+    )
+    session = cursor.fetchone()
+    conn.close()
+
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    expires_at = datetime.fromisoformat(session["expires_at"])
+    if expires_at < datetime.now():
+        raise HTTPException(status_code=401, detail="Session expired. Please login again.")
+
+    return {
+        "username": session["username"],
+        "role": normalize_role(session["role"]),
+        "fullName": session["full_name"],
+    }
+
+
+def require_roles(*allowed_roles: str):
+    allowed = {normalize_role(role) for role in allowed_roles}
+
+    def checker(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+        if normalize_role(user.get("role", "")) not in allowed:
+            raise HTTPException(status_code=403, detail="You do not have permission to access this action")
+        return user
+
+    return checker
+
+
 def score_high_better(value: float, excellent: float, good: float, average: float):
     if value >= excellent:
         return 100, "green"
@@ -401,20 +551,10 @@ def home():
     return FileResponse("static/index.html")
 
 
-def validate_upload_extension(filename: str) -> None:
-    allowed_extensions = {".xlsx", ".xls", ".csv"}
-    extension = os.path.splitext(filename)[1].lower()
-    if extension not in allowed_extensions:
-        raise ValueError("Only .xlsx, .xls, and .csv files are supported.")
-
-
-
-
 @app.post("/upload-ceo")
-async def upload_ceo(file: UploadFile = File(...)):
+async def upload_ceo(file: UploadFile = File(...), user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-    validate_upload_extension(file.filename)
     file_path = os.path.join(upload_dir, file.filename)
 
     with open(file_path, "wb") as buffer:
@@ -422,28 +562,15 @@ async def upload_ceo(file: UploadFile = File(...)):
 
     try:
         ceo_data = read_ceo_excel_flexible(file_path)
-        return {
-            "success": True,
-            "message": "CEO file processed successfully",
-            "data": ceo_data,
-            "auto_fill_fields": ceo_data.get("auto_fill_fields", {}),
-        }
+        return {"success": True, "message": "CEO file processed successfully", "data": ceo_data}
     except Exception as e:
         return {"success": False, "message": f"Error processing CEO file: {str(e)}"}
 
 
-
-
-@app.post("/import-ceo-file")
-async def import_ceo_file(file: UploadFile = File(...)):
-    return await upload_ceo(file)
-
-
 @app.post("/upload-finance")
-async def upload_finance(file: UploadFile = File(...)):
+async def upload_finance(file: UploadFile = File(...), user: Dict[str, Any] = Depends(require_roles("Admin", "Finance"))):
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-    validate_upload_extension(file.filename)
     file_path = os.path.join(upload_dir, file.filename)
 
     with open(file_path, "wb") as buffer:
@@ -457,7 +584,7 @@ async def upload_finance(file: UploadFile = File(...)):
 
 
 @app.post("/finance/analyze")
-def analyze_finance(data: FinanceInput):
+def analyze_finance(data: FinanceInput, user: Dict[str, Any] = Depends(require_roles("Admin", "Finance"))):
     revenue = data.revenue
     cogs = data.cogs
     operating_expenses = data.operating_expenses
@@ -522,7 +649,7 @@ def analyze_finance(data: FinanceInput):
 
 
 @app.post("/kpi/calculate")
-def calculate_kpi(data: KPIInput):
+def calculate_kpi(data: KPIInput, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
     sales_growth = safe_div(data.current_revenue - data.previous_revenue, data.previous_revenue, percent=True)
     conversion_rate = safe_div(data.converted_customers, data.leads_count, percent=True)
     average_order_value = safe_div(data.current_revenue, data.orders_count)
@@ -635,43 +762,150 @@ assessments_db: List[Dict[str, Any]] = []
 
 
 @app.post("/kpi/save")
-def save_assessment(data: KPIInput):
-    result = calculate_kpi(data)
+def save_assessment(data: KPIInput, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
+    result = calculate_kpi(data, user)
     record = {"company_name": data.company_name, "result": result, "created_at": datetime.now().isoformat()}
     assessments_db.append(record)
     return {"message": "Assessment saved successfully"}
 
 
 @app.get("/kpi/list")
-def list_assessments():
+def list_assessments(user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
     return {"companies": [item["company_name"] for item in assessments_db]}
 
 
 @app.get("/kpi/company/{name}")
-def get_company(name: str):
+def get_company(name: str, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
     for item in assessments_db:
         if item["company_name"] == name:
             return item["result"]
     return {"error": "Company not found"}
 
 
+@app.post("/users")
+def create_user(data: UserCreateInput, user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    allowed_roles = {"Admin", "Manager", "Finance", "Employee"}
+    role = normalize_role(data.role)
+
+    if role not in allowed_roles:
+        return {"success": False, "message": "Role must be Admin, Manager, Finance, or Employee"}
+
+    username = data.username.strip().lower()
+    full_name = data.full_name.strip()
+
+    if not username or not data.password.strip() or not full_name:
+        return {"success": False, "message": "Username, password, and full name are required"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            INSERT INTO users (username, password_hash, role, full_name, is_active, created_at)
+            VALUES (?, ?, ?, ?, 1, ?)
+            """,
+            (username, hash_password(data.password.strip()), role, full_name, datetime.now().isoformat()),
+        )
+        conn.commit()
+        return {
+            "success": True,
+            "message": "User created successfully",
+            "user": {"username": username, "role": role, "fullName": full_name},
+        }
+    except sqlite3.IntegrityError:
+        return {"success": False, "message": "Username already exists"}
+    finally:
+        conn.close()
+
+
+@app.get("/users/list")
+def list_users(user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT username, role, full_name, is_active, created_at
+        FROM users
+        ORDER BY id ASC
+        """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    users = [
+        {
+            "username": row["username"],
+            "role": row["role"],
+            "fullName": row["full_name"],
+            "isActive": bool(row["is_active"]),
+            "createdAt": row["created_at"],
+        }
+        for row in rows
+    ]
+    return {"users": users}
+
+
+@app.get("/me")
+def me(user: Dict[str, Any] = Depends(get_current_user)):
+    return {"success": True, "user": user}
+
+
+@app.post("/logout")
+def logout(user: Dict[str, Any] = Depends(get_current_user), authorization: Optional[str] = Header(default=None), x_auth_token: Optional[str] = Header(default=None)):
+    token = x_auth_token
+    if authorization:
+        parts = authorization.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+
+    if token:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        conn.commit()
+        conn.close()
+
+    return {"success": True, "message": "Logged out successfully"}
+
+
 @app.post("/login")
 def login(data: LoginInput):
-    users = [
-        {"username": "admin", "password": "1234", "role": "Admin", "fullName": "Ahmed Eissa"},
-        {"username": "manager", "password": "1234", "role": "Manager", "fullName": "Operations Manager"},
-        {"username": "employee", "password": "1234", "role": "Employee", "fullName": "Staff User"},
-    ]
+    username = data.username.strip().lower()
+    password = data.password.strip()
 
-    for user in users:
-        if user["username"] == data.username and user["password"] == data.password:
-            return {
-                "success": True,
-                "user": {
-                    "username": user["username"],
-                    "role": user["role"],
-                    "fullName": user["fullName"],
-                },
-            }
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT username, password_hash, role, full_name, is_active
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    )
+    user = cursor.fetchone()
+    conn.close()
 
-    return {"success": False, "message": "Wrong username or password"}
+    if not user:
+        return {"success": False, "message": "Wrong username or password"}
+
+    if not bool(user["is_active"]):
+        return {"success": False, "message": "This user is inactive"}
+
+    if not verify_password(password, user["password_hash"]):
+        return {"success": False, "message": "Wrong username or password"}
+
+    safe_role = normalize_role(user["role"])
+    token = create_session_token(user["username"], safe_role, user["full_name"])
+
+    return {
+        "success": True,
+        "token": token,
+        "expiresInHours": SESSION_HOURS,
+        "user": {
+            "username": user["username"],
+            "role": safe_role,
+            "fullName": user["full_name"],
+        },
+    }
