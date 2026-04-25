@@ -203,33 +203,163 @@ opacity:.97;
 #loginPage{
 position:fixed;
 inset:0;
-background:#071120;
+background:
+radial-gradient(circle at 20% 20%, rgba(34,211,238,.18), transparent 26%),
+radial-gradient(circle at 80% 10%, rgba(99,102,241,.18), transparent 28%),
+radial-gradient(circle at 50% 95%, rgba(16,185,129,.10), transparent 30%),
+linear-gradient(135deg,#030712 0%,#071120 45%,#0f172a 100%);
 display:flex;
 justify-content:center;
 align-items:center;
 z-index:9999;
+overflow:hidden;
 }
 
+#loginPage::before{
+content:"";
+position:absolute;
+inset:-40%;
+background:
+linear-gradient(115deg, transparent 0 45%, rgba(34,211,238,.08) 50%, transparent 55% 100%);
+animation:loginSweep 8s ease-in-out infinite;
+}
+
+#loginPage::after{
+content:"";
+position:absolute;
+width:620px;
+height:620px;
+border-radius:50%;
+border:1px solid rgba(34,211,238,.10);
+box-shadow:0 0 80px rgba(34,211,238,.08);
+animation:loginOrbit 16s linear infinite;
+}
+
+.login-graphics{
+position:absolute;
+inset:0;
+pointer-events:none;
+z-index:0;
+}
+
+.login-graphics span{
+position:absolute;
+width:8px;
+height:8px;
+border-radius:50%;
+background:rgba(103,232,249,.65);
+box-shadow:0 0 18px rgba(103,232,249,.70);
+animation:floatDot 7s ease-in-out infinite;
+}
+
+.login-graphics span:nth-child(1){left:16%;top:22%;animation-delay:0s;}
+.login-graphics span:nth-child(2){left:78%;top:24%;animation-delay:1.2s;width:6px;height:6px;}
+.login-graphics span:nth-child(3){left:24%;top:72%;animation-delay:2.3s;width:10px;height:10px;}
+.login-graphics span:nth-child(4){left:68%;top:76%;animation-delay:3.1s;}
+.login-graphics span:nth-child(5){left:50%;top:15%;animation-delay:4s;width:5px;height:5px;}
+
 .login-box{
-background:rgba(13,27,42,.92);
-padding:40px;
-width:340px;
-border-radius:20px;
-border:1px solid rgba(255,255,255,.05);
+position:relative;
+z-index:2;
+background:linear-gradient(180deg, rgba(15,23,42,.78), rgba(2,6,23,.86));
+backdrop-filter:blur(18px);
+padding:42px 38px;
+width:390px;
+max-width:92vw;
+border-radius:26px;
+border:1px solid rgba(148,163,184,.16);
 box-shadow:
-0 0 30px rgba(34,211,238,.12),
-0 20px 40px rgba(0,0,0,.28);
+0 0 45px rgba(34,211,238,.12),
+0 24px 55px rgba(0,0,0,.38),
+inset 0 1px 0 rgba(255,255,255,.08);
+animation:loginCardIn .7s ease both;
+}
+
+.login-mark{
+width:58px;
+height:58px;
+margin:0 auto 16px;
+border-radius:18px;
+background:linear-gradient(135deg,#06b6d4,#6366f1);
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:900;
+font-size:24px;
+letter-spacing:.5px;
+color:#fff;
+box-shadow:0 0 28px rgba(34,211,238,.28);
 }
 
 .login-box h2{
 text-align:center;
-color:#22d3ee;
-margin-bottom:20px;
+color:#e0faff;
+margin-bottom:8px;
+font-size:26px;
+letter-spacing:.3px;
+}
+
+.login-subtitle{
+text-align:center;
+color:#93c5fd;
+font-size:13px;
+margin-bottom:24px;
 }
 
 .login-box input{
 width:100%;
-margin-bottom:15px;
+margin-bottom:14px;
+background:rgba(2,6,23,.55);
+border:1px solid rgba(148,163,184,.18);
+border-radius:14px;
+padding:14px 14px;
+}
+
+.login-box input:focus{
+background:rgba(15,23,42,.92);
+border-color:rgba(34,211,238,.65);
+box-shadow:0 0 0 4px rgba(34,211,238,.10);
+}
+
+.login-box button{
+width:100%;
+margin-top:4px;
+border-radius:14px;
+padding:14px;
+background:linear-gradient(90deg,#06b6d4,#2563eb,#6366f1);
+box-shadow:0 14px 28px rgba(37,99,235,.22);
+}
+
+.login-box button:hover{
+transform:translateY(-2px);
+box-shadow:0 18px 34px rgba(37,99,235,.32);
+}
+
+.login-footer{
+margin-top:18px;
+text-align:center;
+font-size:12px;
+color:#64748b;
+}
+
+@keyframes loginCardIn{
+from{opacity:0;transform:translateY(18px) scale(.98);}
+to{opacity:1;transform:translateY(0) scale(1);}
+}
+
+@keyframes loginSweep{
+0%,100%{transform:translateX(-8%) rotate(0deg);opacity:.45;}
+50%{transform:translateX(8%) rotate(8deg);opacity:.9;}
+}
+
+@keyframes loginOrbit{
+from{transform:rotate(0deg) scale(.96);}
+to{transform:rotate(360deg) scale(1.04);}
+}
+
+@keyframes floatDot{
+0%,100%{transform:translateY(0);opacity:.45;}
+50%{transform:translateY(-18px);opacity:1;}
 }
 
 #msg{
@@ -515,15 +645,21 @@ border-top:1px solid rgba(148,163,184,.10);
 <body>
 
 <div id="loginPage">
+<div class="login-graphics" aria-hidden="true">
+<span></span><span></span><span></span><span></span><span></span>
+</div>
 <div class="login-box">
-<h2>Reap Service LOGIN</h2>
+<div class="login-mark">RS</div>
+<h2>Reap Service Login</h2>
+<p class="login-subtitle">Secure Business Intelligence Access</p>
 
 <input type="text" id="email" placeholder="Username">
 <input type="password" id="password" placeholder="Password">
 
-<button onclick="login()">LOGIN</button>
+<button onclick="login()">Login Securely</button>
 
 <p id="msg"></p>
+<div class="login-footer">Protected KPI Dashboard</div>
 </div>
 </div>
 
