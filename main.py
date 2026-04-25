@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any, Tuple
 
 import pandas as pd
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -377,6 +377,17 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 class KPIInput(BaseModel):
     company_name: str = "Company"
     current_revenue: float
@@ -431,8 +442,76 @@ class UserCreateInput(BaseModel):
     full_name: str
 
 
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str
 
-SESSION_HOURS = 8
+
+class AdminChangePasswordInput(BaseModel):
+    username: str
+    new_password: str
+
+
+
+SESSION_HOURS = int(os.getenv("SESSION_HOURS", "8"))
+MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
+LOGIN_BLOCK_MINUTES = int(os.getenv("LOGIN_BLOCK_MINUTES", "10"))
+ALLOWED_UPLOAD_EXTENSIONS = {".xlsx", ".xls", ".csv"}
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "8"))
+login_attempts: Dict[str, Dict[str, Any]] = {}
+
+
+def get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def clean_old_attempts() -> None:
+    now = datetime.now()
+    expired_keys = []
+    for key, item in login_attempts.items():
+        blocked_until = item.get("blocked_until")
+        last_attempt = item.get("last_attempt")
+        if blocked_until and blocked_until > now:
+            continue
+        if last_attempt and (now - last_attempt).total_seconds() > LOGIN_BLOCK_MINUTES * 60:
+            expired_keys.append(key)
+    for key in expired_keys:
+        login_attempts.pop(key, None)
+
+
+def check_login_rate_limit(request: Request, username: str) -> None:
+    clean_old_attempts()
+    key = f"{get_client_ip(request)}:{username.lower()}"
+    item = login_attempts.get(key)
+    if item and item.get("blocked_until") and item["blocked_until"] > datetime.now():
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+
+
+def record_login_failure(request: Request, username: str) -> None:
+    key = f"{get_client_ip(request)}:{username.lower()}"
+    item = login_attempts.setdefault(key, {"count": 0, "last_attempt": datetime.now(), "blocked_until": None})
+    item["count"] += 1
+    item["last_attempt"] = datetime.now()
+    if item["count"] >= MAX_LOGIN_ATTEMPTS:
+        item["blocked_until"] = datetime.now() + timedelta(minutes=LOGIN_BLOCK_MINUTES)
+
+
+def clear_login_failures(request: Request, username: str) -> None:
+    key = f"{get_client_ip(request)}:{username.lower()}"
+    login_attempts.pop(key, None)
+
+
+def validate_upload(file: UploadFile) -> None:
+    filename = os.path.basename(file.filename or "")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only Excel/CSV files are allowed")
+    content_length = file.headers.get("content-length") if file.headers else None
+    if content_length and int(content_length) > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"File too large. Max {MAX_UPLOAD_SIZE_MB} MB")
 
 
 def normalize_role(role: str) -> str:
@@ -553,9 +632,11 @@ def home():
 
 @app.post("/upload-ceo")
 async def upload_ceo(file: UploadFile = File(...), user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
+    validate_upload(file)
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, file.filename)
+    safe_name = os.path.basename(file.filename or "upload.xlsx")
+    file_path = os.path.join(upload_dir, safe_name)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -569,9 +650,11 @@ async def upload_ceo(file: UploadFile = File(...), user: Dict[str, Any] = Depend
 
 @app.post("/upload-finance")
 async def upload_finance(file: UploadFile = File(...), user: Dict[str, Any] = Depends(require_roles("Admin", "Finance"))):
+    validate_upload(file)
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, file.filename)
+    safe_name = os.path.basename(file.filename or "upload.xlsx")
+    file_path = os.path.join(upload_dir, safe_name)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -869,10 +952,56 @@ def logout(user: Dict[str, Any] = Depends(get_current_user), authorization: Opti
     return {"success": True, "message": "Logged out successfully"}
 
 
+@app.post("/change-password")
+def change_own_password(data: ChangePasswordInput, user: Dict[str, Any] = Depends(get_current_user)):
+    if len(data.new_password.strip()) < 8:
+        return {"success": False, "message": "New password must be at least 8 characters"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM users WHERE username = ?", (user["username"],))
+    row = cursor.fetchone()
+    if not row or not verify_password(data.current_password.strip(), row["password_hash"]):
+        conn.close()
+        return {"success": False, "message": "Current password is incorrect"}
+
+    cursor.execute(
+        "UPDATE users SET password_hash = ? WHERE username = ?",
+        (hash_password(data.new_password.strip()), user["username"]),
+    )
+    cursor.execute("DELETE FROM sessions WHERE username = ?", (user["username"],))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Password changed. Please login again."}
+
+
+@app.post("/admin/change-user-password")
+def admin_change_user_password(data: AdminChangePasswordInput, user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    username = data.username.strip().lower()
+    if len(data.new_password.strip()) < 8:
+        return {"success": False, "message": "New password must be at least 8 characters"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET password_hash = ? WHERE username = ?",
+        (hash_password(data.new_password.strip()), username),
+    )
+    updated = cursor.rowcount
+    cursor.execute("DELETE FROM sessions WHERE username = ?", (username,))
+    conn.commit()
+    conn.close()
+
+    if updated == 0:
+        return {"success": False, "message": "User not found"}
+    return {"success": True, "message": "User password changed and old sessions logged out"}
+
+
 @app.post("/login")
-def login(data: LoginInput):
+def login(data: LoginInput, request: Request):
     username = data.username.strip().lower()
     password = data.password.strip()
+    check_login_rate_limit(request, username)
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -888,13 +1017,18 @@ def login(data: LoginInput):
     conn.close()
 
     if not user:
+        record_login_failure(request, username)
         return {"success": False, "message": "Wrong username or password"}
 
     if not bool(user["is_active"]):
+        record_login_failure(request, username)
         return {"success": False, "message": "This user is inactive"}
 
     if not verify_password(password, user["password_hash"]):
+        record_login_failure(request, username)
         return {"success": False, "message": "Wrong username or password"}
+
+    clear_login_failures(request, username)
 
     safe_role = normalize_role(user["role"])
     token = create_session_token(user["username"], safe_role, user["full_name"])
