@@ -356,6 +356,43 @@ def init_db() -> None:
         """
     )
 
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS business_settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            product_name TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            plan TEXT NOT NULL,
+            license_status TEXT NOT NULL,
+            trial_expires_at TEXT NOT NULL,
+            max_users INTEGER NOT NULL DEFAULT 5,
+            license_key_hash TEXT,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cursor.execute("SELECT id FROM business_settings WHERE id = 1")
+    existing_business = cursor.fetchone()
+    if not existing_business:
+        cursor.execute(
+            """
+            INSERT INTO business_settings
+            (id, product_name, company_name, plan, license_status, trial_expires_at, max_users, license_key_hash, updated_at)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "Reap Service KPI Dashboard",
+                "Demo Company",
+                "Trial",
+                "trial",
+                (datetime.now() + timedelta(days=int(os.getenv("DEFAULT_TRIAL_DAYS", "14")))).isoformat(),
+                int(os.getenv("DEFAULT_MAX_USERS", "5")),
+                None,
+                datetime.now().isoformat(),
+            ),
+        )
+
     conn.commit()
     conn.close()
     seed_default_users()
@@ -450,6 +487,16 @@ class ChangePasswordInput(BaseModel):
 class AdminChangePasswordInput(BaseModel):
     username: str
     new_password: str
+
+
+class BusinessLicenseInput(BaseModel):
+    company_name: str = "Demo Company"
+    product_name: str = "Reap Service KPI Dashboard"
+    plan: str = "Trial"
+    license_status: str = "trial"
+    trial_days: int = 14
+    max_users: int = 5
+    license_key: Optional[str] = None
 
 
 
@@ -595,6 +642,66 @@ def require_roles(*allowed_roles: str):
         return user
 
     return checker
+
+
+def get_business_settings() -> Dict[str, Any]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT product_name, company_name, plan, license_status, trial_expires_at, max_users, updated_at
+        FROM business_settings
+        WHERE id = 1
+        """
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "productName": "Reap Service KPI Dashboard",
+            "companyName": "Demo Company",
+            "plan": "Trial",
+            "licenseStatus": "trial",
+            "trialExpiresAt": (datetime.now() + timedelta(days=14)).isoformat(),
+            "maxUsers": 5,
+            "updatedAt": datetime.now().isoformat(),
+            "daysLeft": 14,
+            "isActive": True,
+        }
+
+    trial_expires = datetime.fromisoformat(row["trial_expires_at"])
+    days_left = max(0, (trial_expires - datetime.now()).days)
+    status = (row["license_status"] or "trial").lower()
+    is_active = status in {"active", "paid"} or (status == "trial" and trial_expires >= datetime.now())
+
+    return {
+        "productName": row["product_name"],
+        "companyName": row["company_name"],
+        "plan": row["plan"],
+        "licenseStatus": status,
+        "trialExpiresAt": row["trial_expires_at"],
+        "maxUsers": int(row["max_users"]),
+        "updatedAt": row["updated_at"],
+        "daysLeft": days_left,
+        "isActive": is_active,
+    }
+
+
+def count_active_users() -> int:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) AS total FROM users WHERE is_active = 1")
+    row = cursor.fetchone()
+    conn.close()
+    return int(row["total"] if row else 0)
+
+
+def make_license_hash(license_key: Optional[str]) -> Optional[str]:
+    if not license_key:
+        return None
+    secret = os.getenv("LICENSE_SECRET", "change-this-license-secret")
+    return hashlib.sha256((license_key.strip() + secret).encode("utf-8")).hexdigest()
 
 
 def score_high_better(value: float, excellent: float, good: float, average: float):
@@ -879,6 +986,10 @@ def create_user(data: UserCreateInput, user: Dict[str, Any] = Depends(require_ro
     if not username or not data.password.strip() or not full_name:
         return {"success": False, "message": "Username, password, and full name are required"}
 
+    business = get_business_settings()
+    if count_active_users() >= business.get("maxUsers", 5):
+        return {"success": False, "message": f"User limit reached for current plan. Max users: {business.get('maxUsers', 5)}"}
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -997,6 +1108,59 @@ def admin_change_user_password(data: AdminChangePasswordInput, user: Dict[str, A
     return {"success": True, "message": "User password changed and old sessions logged out"}
 
 
+@app.get("/business/status")
+def business_status(user: Dict[str, Any] = Depends(get_current_user)):
+    settings = get_business_settings()
+    settings["activeUsers"] = count_active_users()
+    return {"success": True, "business": settings}
+
+
+@app.get("/admin/business")
+def admin_business(user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    settings = get_business_settings()
+    settings["activeUsers"] = count_active_users()
+    return {"success": True, "business": settings}
+
+
+@app.post("/admin/business/license")
+def update_business_license(data: BusinessLicenseInput, user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    status = data.license_status.strip().lower()
+    if status not in {"trial", "active", "paid", "inactive"}:
+        return {"success": False, "message": "License status must be trial, active, paid, or inactive"}
+
+    plan = data.plan.strip() or "Trial"
+    max_users = max(1, min(int(data.max_users), 999))
+    trial_days = max(0, min(int(data.trial_days), 3650))
+    trial_expires_at = (datetime.now() + timedelta(days=trial_days)).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE business_settings
+        SET product_name = ?, company_name = ?, plan = ?, license_status = ?,
+            trial_expires_at = ?, max_users = ?, license_key_hash = COALESCE(?, license_key_hash), updated_at = ?
+        WHERE id = 1
+        """,
+        (
+            data.product_name.strip() or "Reap Service KPI Dashboard",
+            data.company_name.strip() or "Demo Company",
+            plan,
+            status,
+            trial_expires_at,
+            max_users,
+            make_license_hash(data.license_key),
+            datetime.now().isoformat(),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    settings = get_business_settings()
+    settings["activeUsers"] = count_active_users()
+    return {"success": True, "message": "Business license updated successfully", "business": settings}
+
+
 @app.post("/login")
 def login(data: LoginInput, request: Request):
     username = data.username.strip().lower()
@@ -1037,6 +1201,7 @@ def login(data: LoginInput, request: Request):
         "success": True,
         "token": token,
         "expiresInHours": SESSION_HOURS,
+        "business": get_business_settings(),
         "user": {
             "username": user["username"],
             "role": safe_role,
