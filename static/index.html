@@ -2903,42 +2903,54 @@ const pageH = doc.internal.pageSize.getHeight();
 const generatedAt = new Date().toLocaleString();
 
 function bg(){
-doc.setFillColor(3, 7, 18);
+doc.setFillColor(2, 6, 23);
 doc.rect(0, 0, pageW, pageH, "F");
-doc.setFillColor(6, 16, 31);
-doc.roundedRect(8, 8, pageW-16, pageH-16, 6, 6, "F");
+doc.setFillColor(8, 16, 32);
+doc.roundedRect(7, 7, pageW-14, pageH-14, 8, 8, "F");
+doc.setFillColor(12, 22, 42);
+doc.roundedRect(11, 11, pageW-22, pageH-22, 6, 6, "F");
 }
 function header(title, subtitle){
 doc.setFillColor(15, 23, 42);
-doc.roundedRect(12, 12, pageW-24, 24, 4, 4, "F");
+doc.roundedRect(14, 14, pageW-28, 34, 5, 5, "F");
+doc.setDrawColor(34, 211, 238);
+doc.setLineWidth(1.2);
+doc.line(16, 47, pageW-16, 47);
 doc.setTextColor(103, 232, 249);
-doc.setFontSize(17);
-doc.text(title, 18, 24);
-doc.setTextColor(148, 163, 184);
-doc.setFontSize(8.5);
-doc.text(subtitle, 18, 31);
+doc.setFontSize(25);
+doc.setFont(undefined, "bold");
+doc.text(title, 20, 28);
+doc.setTextColor(203, 213, 225);
+doc.setFontSize(11.5);
+doc.setFont(undefined, "normal");
+doc.text(subtitle, 20, 38);
 doc.setTextColor(226, 232, 240);
-doc.setFontSize(9);
-doc.text(`Generated: ${generatedAt}`, pageW-72, 24);
-doc.text(`Records: ${salesRowsCache.length}`, pageW-72, 31);
+doc.setFontSize(10.5);
+doc.text(`Generated: ${generatedAt}`, pageW-88, 27);
+doc.text(`Records: ${salesRowsCache.length}`, pageW-88, 38);
 }
 function card(x, y, w, h, label, value, accent){
 doc.setFillColor(15, 23, 42);
-doc.roundedRect(x, y, w, h, 4, 4, "F");
+doc.roundedRect(x, y, w, h, 5, 5, "F");
 doc.setDrawColor(accent[0], accent[1], accent[2]);
-doc.setLineWidth(.6);
-doc.line(x+4, y+4, x+4, y+h-4);
+doc.setLineWidth(1.3);
+doc.line(x+5, y+5, x+5, y+h-5);
 doc.setTextColor(148, 163, 184);
-doc.setFontSize(8.5);
-doc.text(label, x+8, y+9);
+doc.setFontSize(10.5);
+doc.setFont(undefined, "bold");
+doc.text(label, x+10, y+12);
 doc.setTextColor(248, 250, 252);
-doc.setFontSize(14);
-doc.text(String(value).substring(0, 24), x+8, y+20);
+doc.setFontSize(18);
+doc.setFont(undefined, "bold");
+doc.text(String(value).substring(0, 22), x+10, y+28);
 }
-function sectionTitle(text, x, y){
+function sectionBox(x, y, w, h, title){
+doc.setFillColor(15,23,42);
+doc.roundedRect(x, y, w, h, 6, 6, "F");
 doc.setTextColor(103, 232, 249);
-doc.setFontSize(11);
-doc.text(text, x, y);
+doc.setFontSize(14);
+doc.setFont(undefined, "bold");
+doc.text(title, x+7, y+12);
 }
 function safeText(value){return String(value ?? "-").replace(/\s+/g, " ");}
 
@@ -2952,44 +2964,42 @@ const cards = [
 ["Average Sale", money(summary.averageSale || 0), [250,204,21]],
 ["Top Product", String(summary.topProduct || "-").substring(0,18), [244,114,182]],
 ];
-let cx = 12;
-cards.forEach(c => { card(cx, 44, 52, 28, c[0], c[1], c[2]); cx += 56; });
+let cx = 14;
+cards.forEach(c => { card(cx, 56, 52.5, 36, c[0], c[1], c[2]); cx += 54.5; });
 
 const repImg = salesChartImage(salesRepChartInstance);
 const prodImg = salesChartImage(salesProductChartInstance);
 const trendImg = salesChartImage(salesTrendChartInstance);
 
-doc.setFillColor(15,23,42);
-doc.roundedRect(12, 82, 130, 70, 5, 5, "F");
-sectionTitle("Sales Amount by Sales Rep", 18, 93);
-if(repImg) doc.addImage(repImg, "PNG", 19, 98, 116, 46);
+sectionBox(14, 102, 166, 80, "Sales Amount by Sales Rep");
+if(repImg) doc.addImage(repImg, "PNG", 22, 118, 150, 54);
 
-doc.setFillColor(15,23,42);
-doc.roundedRect(150, 82, 135, 70, 5, 5, "F");
-sectionTitle("Executive Insights", 156, 93);
+sectionBox(188, 102, 95, 80, "Executive Insights");
 doc.setTextColor(226,232,240);
-doc.setFontSize(9.5);
-doc.text(`Best Sales Rep: ${analytics.topRep[0]}`, 158, 106, {maxWidth:118});
-doc.text(`Amount: ${money(analytics.topRep[1])}`, 158, 116);
-doc.text(`Top Customer: ${analytics.topCustomer[0]}`, 158, 128, {maxWidth:118});
-doc.text(`Top Product: ${analytics.topProductAmount[0]}`, 158, 140, {maxWidth:118});
+doc.setFontSize(11.5);
+doc.setFont(undefined, "bold");
+doc.text(`Best Rep: ${analytics.topRep[0]}`, 196, 122, {maxWidth:78});
+doc.setFont(undefined, "normal");
+doc.text(`Amount: ${money(analytics.topRep[1])}`, 196, 134);
+doc.text(`Top Customer: ${analytics.topCustomer[0]}`, 196, 148, {maxWidth:78});
+doc.text(`Top Product: ${analytics.topProductAmount[0]}`, 196, 163, {maxWidth:78});
 
-doc.setFillColor(15,23,42);
-doc.roundedRect(12, 160, 132, 42, 5, 5, "F");
-sectionTitle("Monthly Sales Trend", 18, 171);
-if(trendImg) doc.addImage(trendImg, "PNG", 22, 174, 112, 22);
+sectionBox(14, 188, 133, 62, "Monthly Sales Trend");
+if(trendImg) doc.addImage(trendImg, "PNG", 22, 204, 117, 35);
 
-doc.setFillColor(15,23,42);
-doc.roundedRect(152, 160, 132, 42, 5, 5, "F");
-sectionTitle("Product Mix / Quantity", 158, 171);
-if(prodImg) doc.addImage(prodImg, "PNG", 194, 172, 36, 26);
+sectionBox(154, 188, 129, 62, "Product Performance");
+if(prodImg) doc.addImage(prodImg, "PNG", 190, 202, 52, 38);
 
 const rec = salesRowsCache.length ? `Recommendation: Focus on ${analytics.topProductAmount[0]} and replicate ${analytics.topRep[0]}'s sales pattern across the team.` : "Recommendation: Add sales transactions to generate insights.";
 doc.setFillColor(2, 6, 23);
-doc.roundedRect(12, 205, pageW-24, 22, 4, 4, "F");
+doc.roundedRect(14, 256, pageW-28, 26, 5, 5, "F");
 doc.setTextColor(203, 213, 225);
-doc.setFontSize(9.5);
-doc.text(rec, 18, 218, {maxWidth: pageW-36});
+doc.setFontSize(12);
+doc.setFont(undefined, "bold");
+doc.text("Executive Recommendation", 20, 267);
+doc.setFont(undefined, "normal");
+doc.setFontSize(10.5);
+doc.text(rec, 20, 276, {maxWidth: pageW-40});
 
 const rows = salesRowsCache || [];
 doc.addPage("l");
@@ -3001,43 +3011,46 @@ const cols = [
 {h:"Qty", w:18}, {h:"Unit", w:24}, {h:"Total", w:28}, {h:"Payment", w:24}, {h:"Notes", w:40}
 ];
 const startX = 12;
-let y = 48;
+let y = 64;
 function drawTableHeader(){
 let x = startX;
 doc.setFillColor(30,41,59);
-doc.roundedRect(startX, y-8, pageW-24, 10, 2, 2, "F");
+doc.roundedRect(startX, y-9, pageW-24, 11, 2, 2, "F");
 doc.setTextColor(226,232,240);
-doc.setFontSize(7.5);
+doc.setFontSize(8.5);
+doc.setFont(undefined, "bold");
 cols.forEach(col => { doc.text(col.h, x+1.5, y-2); x += col.w; });
-y += 6;
+y += 7;
 }
 drawTableHeader();
-doc.setFontSize(7);
+doc.setFontSize(7.5);
+doc.setFont(undefined, "normal");
 rows.slice(0, 120).forEach((r, idx) => {
 if(y > pageH-16){
 doc.addPage("l");
 bg();
 header("Sales Transactions Detail", "Continued");
-y = 48;
+y = 64;
 drawTableHeader();
-doc.setFontSize(7);
+doc.setFontSize(7.5);
+doc.setFont(undefined, "normal");
 }
 let x = startX;
-if(idx % 2 === 0){ doc.setFillColor(15,23,42); doc.rect(startX, y-4.7, pageW-24, 6.8, "F"); }
+if(idx % 2 === 0){ doc.setFillColor(15,23,42); doc.rect(startX, y-5.2, pageW-24, 7.6, "F"); }
 doc.setTextColor(226,232,240);
 const vals = [
 r.saleDate, r.salesFullName || r.salesUsername, r.customerName, r.productName,
 money(r.quantity), money(r.unitPrice), money(r.totalAmount), r.paymentMethod, r.notes
 ];
 vals.forEach((v, i) => { doc.text(safeText(v).substring(0, i===8?28:22), x+1.5, y); x += cols[i].w; });
-y += 7;
+y += 7.8;
 });
 
 const pageCount = doc.internal.getNumberOfPages();
 for(let i=1;i<=pageCount;i++){
 doc.setPage(i);
 doc.setTextColor(100,116,139);
-doc.setFontSize(8);
+doc.setFontSize(8.5);
 doc.text(`Digital Solution by Ahmed Eissa  |  Page ${i} of ${pageCount}`, 12, pageH-6);
 }
 
