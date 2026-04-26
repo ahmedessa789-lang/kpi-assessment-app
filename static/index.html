@@ -1784,7 +1784,7 @@ async function ensureSalesDataForCEOReport(){
     try {
         if (typeof loadSalesReport === "function") { await loadSalesReport(); }
         if (typeof updateSalesCharts === "function") { updateSalesCharts(); }
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
         console.warn("Sales data could not be loaded for CEO report", error);
     }
@@ -1801,6 +1801,32 @@ function drawPdfMetricCard(doc, x, y, w, h, title, value){
     doc.text(String(value), x + 5, y + 18, { maxWidth: w - 10 });
 }
 
+function safeChartImageForPdf(canvasId, chartInstance){
+    try {
+        if (chartInstance && typeof chartInstance.update === "function") {
+            chartInstance.update("none");
+        }
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.width || !canvas.height) return null;
+        const dataUrl = canvas.toDataURL("image/png", 1.0);
+        if (!dataUrl || !dataUrl.startsWith("data:image/png") || dataUrl.length < 2000) return null;
+        return dataUrl;
+    } catch (error) {
+        console.warn("Chart image skipped:", canvasId, error);
+        return null;
+    }
+}
+
+function addSafeChartToPdf(doc, imageData, x, y, w, h){
+    if (!imageData) return false;
+    try {
+        doc.addImage(imageData, "PNG", x, y, w, h);
+        return true;
+    } catch (error) {
+        console.warn("PDF chart skipped", error);
+        return false;
+    }
+}
 
 async function exportPDF(){
 try {
@@ -1950,8 +1976,14 @@ try {
         drawPageBackground();
         sectionTitle("Finance Chart", 22);
 
-        const chartImage = financeCanvas.toDataURL("image/png", 1.0);
-        doc.addImage(chartImage, "PNG", 15, 35, 180, 95);
+        const chartImage = safeChartImageForPdf("financeChart", typeof financeChart !== "undefined" ? financeChart : null);
+        if (chartImage) {
+            addSafeChartToPdf(doc, chartImage, 15, 35, 180, 95);
+        } else {
+            doc.setTextColor(230, 240, 255);
+            doc.setFontSize(11);
+            doc.text("Finance chart is not available yet. Please run Financial Statements first.", 20, 60, { maxWidth: 165 });
+        }
 
         sectionTitle("Finance Commentary", 150);
         doc.setTextColor(230, 240, 255);
@@ -1982,33 +2014,51 @@ try {
         drawPdfMetricCard(doc, 152, 45, 38, 24, "Top Product", salesSummary.topProduct || "-");
 
         if (salesRepCanvas) {
-            const repImg = salesRepCanvas.toDataURL("image/png", 1.0);
+            const repImg = safeChartImageForPdf("salesRepChart", typeof salesRepChartInstance !== "undefined" ? salesRepChartInstance : null);
             doc.setFillColor(15, 23, 42);
             doc.roundedRect(15, 78, 180, 72, 4, 4, "F");
             doc.setTextColor(34, 211, 238);
             doc.setFontSize(13);
             doc.text("Sales Amount by Sales Rep", 22, 90);
-            doc.addImage(repImg, "PNG", 20, 96, 170, 48);
+            if (repImg) {
+                addSafeChartToPdf(doc, repImg, 20, 96, 170, 48);
+            } else {
+                doc.setTextColor(230, 240, 255);
+                doc.setFontSize(10);
+                doc.text("Sales by rep chart is not available yet.", 22, 116);
+            }
         }
 
         if (salesTrendCanvas) {
-            const trendImg = salesTrendCanvas.toDataURL("image/png", 1.0);
+            const trendImg = safeChartImageForPdf("salesTrendChart", typeof salesTrendChartInstance !== "undefined" ? salesTrendChartInstance : null);
             doc.setFillColor(15, 23, 42);
             doc.roundedRect(15, 158, 86, 62, 4, 4, "F");
             doc.setTextColor(34, 211, 238);
             doc.setFontSize(12);
             doc.text("Monthly Sales Trend", 21, 170);
-            doc.addImage(trendImg, "PNG", 20, 176, 76, 36);
+            if (trendImg) {
+                addSafeChartToPdf(doc, trendImg, 20, 176, 76, 36);
+            } else {
+                doc.setTextColor(230, 240, 255);
+                doc.setFontSize(9);
+                doc.text("Trend chart is not available yet.", 20, 194);
+            }
         }
 
         if (salesProductCanvas) {
-            const productImg = salesProductCanvas.toDataURL("image/png", 1.0);
+            const productImg = safeChartImageForPdf("salesProductChart", typeof salesProductChartInstance !== "undefined" ? salesProductChartInstance : null);
             doc.setFillColor(15, 23, 42);
             doc.roundedRect(109, 158, 86, 62, 4, 4, "F");
             doc.setTextColor(34, 211, 238);
             doc.setFontSize(12);
             doc.text("Product Mix", 115, 170);
-            doc.addImage(productImg, "PNG", 125, 174, 50, 42);
+            if (productImg) {
+                addSafeChartToPdf(doc, productImg, 125, 174, 50, 42);
+            } else {
+                doc.setTextColor(230, 240, 255);
+                doc.setFontSize(9);
+                doc.text("Product chart is not available yet.", 116, 194);
+            }
         }
 
         doc.setFillColor(15, 23, 42);
@@ -2064,8 +2114,14 @@ try {
         doc.addPage();
         drawPageBackground();
         sectionTitle("KPI Performance Chart", 22);
-        const mainChartImage = mainChartCanvas.toDataURL("image/png", 1.0);
-        doc.addImage(mainChartImage, "PNG", 15, 35, 180, 100);
+        const mainChartImage = safeChartImageForPdf("chart1", typeof chart !== "undefined" ? chart : null);
+        if (mainChartImage) {
+            addSafeChartToPdf(doc, mainChartImage, 15, 35, 180, 100);
+        } else {
+            doc.setTextColor(230, 240, 255);
+            doc.setFontSize(11);
+            doc.text("KPI chart is not available yet. Please run AI Analysis first.", 20, 60, { maxWidth: 165 });
+        }
     }
 
     doc.save("Reap Service_Full_Board_Report.pdf");
