@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>قيّم نفسك قبل ما شركتك تقيّمك</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Tahoma,sans-serif}
+html{scroll-behavior:smooth}
+body{
+background:
+radial-gradient(circle at top left,rgba(34,211,238,.12),transparent 28%),
+radial-gradient(circle at top right,rgba(99,102,241,.14),transparent 32%),
+linear-gradient(135deg,#020617,#0f172a,#111827);
+color:#fff;
+line-height:1.8;
+}
+.container{max-width:1200px;margin:auto;padding:30px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;min-height:100vh}
+.badge{display:inline-block;padding:8px 18px;border-radius:30px;background:rgba(34,211,238,.12);color:#67e8f9;font-weight:bold;margin-bottom:20px;border:1px solid rgba(34,211,238,.22)}
+h1{font-size:56px;line-height:1.2;margin-bottom:20px}
+h1 span{color:#67e8f9}
+p{font-size:22px;color:#cbd5e1;margin-bottom:25px}
+.btns{display:flex;gap:15px;flex-wrap:wrap;margin-top:20px}
+.btn{padding:15px 24px;border-radius:14px;font-weight:bold;text-decoration:none;display:inline-block;cursor:pointer;border:none;font-size:16px}
+.primary{background:linear-gradient(90deg,#06b6d4,#2563eb,#6366f1);color:white;box-shadow:0 14px 30px rgba(37,99,235,.25)}
+.secondary{background:#1e293b;color:white;border:1px solid rgba(255,255,255,.08)}
+.price{margin-top:20px;font-size:24px;color:#4ade80;font-weight:bold}
+.card{background:linear-gradient(180deg,#0f172a,#020617);padding:30px;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.35);border:1px solid rgba(148,163,184,.12)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px}
+.box{background:#111827;padding:18px;border-radius:16px;border:1px solid rgba(148,163,184,.10)}
+.box small{color:#94a3b8}.box h3{font-size:30px;margin-top:8px}
+.chart{height:220px;background:linear-gradient(180deg,rgba(34,211,238,.12),rgba(99,102,241,.06));border-radius:18px;position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.12)}
+.bar{position:absolute;bottom:0;width:12%;border-radius:10px 10px 0 0;background:linear-gradient(180deg,#67e8f9,#2563eb)}
+.b1{right:8%;height:42%}.b2{right:25%;height:72%}.b3{right:42%;height:55%}.b4{right:59%;height:88%}.b5{right:76%;height:65%}
+section{padding:70px 0}.title{font-size:40px;text-align:center;margin-bottom:15px}.sub{text-align:center;color:#cbd5e1;margin-bottom:35px;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.feature{background:#0f172a;padding:25px;border-radius:20px;border:1px solid rgba(148,163,184,.12)}.feature h3{color:#67e8f9;margin-bottom:10px}
+.form{background:linear-gradient(135deg,#0f172a,#111827);padding:35px;border-radius:25px;max-width:760px;margin:auto;border:1px solid rgba(148,163,184,.14);box-shadow:0 18px 45px rgba(0,0,0,.22)}
+input,select{width:100%;padding:14px;margin-bottom:15px;border:none;border-radius:12px;background:#1e293b;color:white;font-size:16px;outline:none;border:1px solid rgba(148,163,184,.12)}
+input:focus,select:focus{border-color:rgba(34,211,238,.5);box-shadow:0 0 0 3px rgba(34,211,238,.1)}
+.countdown{text-align:center;font-size:26px;color:#fbbf24;font-weight:bold;margin-top:15px}
+.form-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.status{margin-top:14px;text-align:center;color:#93c5fd;font-weight:bold;min-height:26px}
+footer{text-align:center;padding:30px;color:#94a3b8}
+@media(max-width:900px){.hero{grid-template-columns:1fr}h1{font-size:38px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.form-actions{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<section class="hero">
+<div>
+<div class="badge">Sales Performance System</div>
+<h1>قبل ما شركتك تقيّمك... <span>قيّم نفسك بالأرقام</span></h1>
+<p>اعرف مستواك الحقيقي في المبيعات، نسبة تحقيق التارجت، واطلع تقرير PDF يثبت نجاحك.</p>
+
+<div class="btns">
+<a href="#lead" class="btn primary">احصل على Demo مجاني</a>
+<a href="https://wa.me/201097490812?text=Sales%20Demo" class="btn secondary" target="_blank">واتساب مباشر</a>
+</div>
+
+<div class="price">اشتراك يبدأ من 500 جنيه شهريًا</div>
+<div class="countdown">عرض خاص لأول 20 مشترك هذا الشهر</div>
+</div>
+
+<div class="card">
+<div class="stats">
+<div class="box"><small>Total Sales</small><h3>128K</h3></div>
+<div class="box"><small>Target</small><h3>84%</h3></div>
+<div class="box"><small>Clients</small><h3>42</h3></div>
+<div class="box"><small>Performance</small><h3>Excellent</h3></div>
+</div>
+<div class="chart">
+<div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div><div class="bar b5"></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="title">ليه تشترك؟</div>
+<div class="sub">لأن الأرقام أقوى من الكلام</div>
+
+<div class="grid">
+<div class="feature"><h3>تقييم شهري</h3><p>اعرف مستواك الحقيقي كل شهر.</p></div>
+<div class="feature"><h3>تقرير PDF</h3><p>قدمه لمديرك أو استخدمه في مقابلة عمل.</p></div>
+<div class="feature"><h3>زيادة فرص الترقي</h3><p>لما يكون معاك أرقام واضحة.</p></div>
+</div>
+</section>
+
+<section id="lead">
+<div class="title">اطلب تقييم مجاني أو عرض سعر</div>
+<div class="sub">اكتب بياناتك وسيتم تسجيل الطلب وفتح واتساب برسالة جاهزة.</div>
+
+<div class="form">
+<input id="name" placeholder="الاسم">
+<input id="phone" placeholder="رقم الموبايل">
+
+<select id="job">
+<option value="">اختر مجال شغلك</option>
+<option>Medical Rep</option>
+<option>Telesales</option>
+<option>Real Estate</option>
+<option>Distribution</option>
+<option>Insurance Sales</option>
+<option>Other</option>
+</select>
+
+<div class="form-actions">
+<button class="btn primary" onclick="sendLead('Demo Request')">احصل على Demo مجاني</button>
+<button class="btn secondary" onclick="sendLead('Price Offer Request')">اطلب عرض سعر</button>
+</div>
+
+<div id="leadStatus" class="status"></div>
+</div>
+</section>
+
+</div>
+
+<footer>Digital Sales Growth Solution</footer>
+
+<script>
+async function sendLead(type="Demo Request"){
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const job = document.getElementById("job").value.trim();
+    const status = document.getElementById("leadStatus");
+
+    if(!name || !phone){
+        alert("من فضلك اكتب الاسم ورقم الموبايل");
+        return;
+    }
+
+    status.textContent = "جاري تسجيل طلبك...";
+
+    try{
+        const res = await fetch("/leads",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                name:name,
+                phone:phone,
+                job:job,
+                request_type:type,
+                source:"Landing Page"
+            })
+        });
+
+        const data = await res.json();
+
+        if(data.success){
+            status.textContent = "تم تسجيل طلبك بنجاح. سيتم فتح واتساب الآن.";
+        }else{
+            status.textContent = "تم فتح واتساب، لكن لم يتم حفظ الطلب: " + (data.message || "");
+        }
+    }catch(e){
+        status.textContent = "تم فتح واتساب، لكن لم يتم حفظ الطلب بسبب مشكلة اتصال.";
+    }
+
+    const msg =
+`الاسم: ${name}
+رقم الموبايل: ${phone}
+المجال: ${job || "-"}
+نوع الطلب: ${type}
+المصدر: Landing Page`;
+
+    window.open("https://wa.me/201097490812?text="+encodeURIComponent(msg), "_blank");
+}
+</script>
+
+</body>
+</html>

@@ -358,6 +358,22 @@ def init_db() -> None:
 
     cursor.execute(
         """
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            job TEXT,
+            request_type TEXT NOT NULL DEFAULT 'Demo Request',
+            source TEXT DEFAULT 'Landing Page',
+            status TEXT NOT NULL DEFAULT 'New',
+            notes TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS sales_transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sales_username TEXT NOT NULL,
@@ -517,6 +533,14 @@ class BusinessLicenseInput(BaseModel):
     max_users: int = 5
     license_key: Optional[str] = None
 
+
+
+class LeadInput(BaseModel):
+    name: str
+    phone: str
+    job: str = ""
+    request_type: str = "Demo Request"
+    source: str = "Landing Page"
 
 
 class SalesCreateInput(BaseModel):
@@ -774,6 +798,10 @@ def get_status(score: float):
 @app.get("/")
 def home():
     return FileResponse("static/index.html")
+
+@app.get("/landing")
+def landing():
+    return FileResponse("static/landing.html")
 
 
 @app.post("/upload-ceo")
@@ -1409,6 +1437,76 @@ def delete_sale(sale_id: int, user: Dict[str, Any] = Depends(require_roles("Admi
 
     return {"success": True, "message": "Sale deleted successfully"}
 
+
+
+
+@app.post("/leads")
+def create_lead(lead: LeadInput):
+    name = lead.name.strip()
+    phone = lead.phone.strip()
+    job = lead.job.strip()
+    request_type = lead.request_type.strip() or "Demo Request"
+    source = lead.source.strip() or "Landing Page"
+
+    if not name or not phone:
+        return {"success": False, "message": "Name and phone are required"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO leads (name, phone, job, request_type, source, status, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            name,
+            phone,
+            job,
+            request_type,
+            source,
+            "New",
+            "",
+            datetime.now().isoformat(),
+        ),
+    )
+    conn.commit()
+    lead_id = cursor.lastrowid
+    conn.close()
+
+    return {"success": True, "message": "Lead saved successfully", "leadId": lead_id}
+
+
+@app.get("/admin/leads")
+def admin_list_leads(user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, name, phone, job, request_type, source, status, notes, created_at
+        FROM leads
+        ORDER BY id DESC
+        """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return {
+        "success": True,
+        "leads": [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "phone": row["phone"],
+                "job": row["job"] or "",
+                "requestType": row["request_type"] or "",
+                "source": row["source"] or "",
+                "status": row["status"] or "New",
+                "notes": row["notes"] or "",
+                "createdAt": row["created_at"],
+            }
+            for row in rows
+        ],
+    }
 
 
 @app.get("/business/status")
