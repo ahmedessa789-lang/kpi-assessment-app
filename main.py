@@ -358,6 +358,25 @@ def init_db() -> None:
 
     cursor.execute(
         """
+        CREATE TABLE IF NOT EXISTS sales_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sales_username TEXT NOT NULL,
+            sales_full_name TEXT NOT NULL,
+            sale_date TEXT NOT NULL,
+            customer_name TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            quantity REAL NOT NULL,
+            unit_price REAL NOT NULL,
+            total_amount REAL NOT NULL,
+            payment_method TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS business_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             product_name TEXT NOT NULL,
@@ -500,6 +519,22 @@ class BusinessLicenseInput(BaseModel):
 
 
 
+class SalesCreateInput(BaseModel):
+    sale_date: str = ""
+    sales_username: Optional[str] = None
+    customer_name: str
+    product_name: str
+    quantity: float
+    unit_price: float
+    payment_method: str = "Cash"
+    notes: str = ""
+
+
+class SalesReportFilter(BaseModel):
+    sales_username: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "8"))
 MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
 LOGIN_BLOCK_MINUTES = int(os.getenv("LOGIN_BLOCK_MINUTES", "10"))
@@ -571,6 +606,10 @@ def normalize_role(role: str) -> str:
         return "Manager"
     if role_clean == "employee":
         return "Employee"
+    if role_clean in {"sales", "sales rep", "sales representative"}:
+        return "Sales"
+    if role_clean in {"sales manager", "salesmanager"}:
+        return "Sales Manager"
     return role.strip().title()
 
 
@@ -974,11 +1013,11 @@ def get_company(name: str, user: Dict[str, Any] = Depends(require_roles("Admin",
 
 @app.post("/users")
 def create_user(data: UserCreateInput, user: Dict[str, Any] = Depends(require_roles("Admin"))):
-    allowed_roles = {"Admin", "Manager", "Finance", "Employee"}
+    allowed_roles = {"Admin", "Manager", "Finance", "Employee", "Sales", "Sales Manager"}
     role = normalize_role(data.role)
 
     if role not in allowed_roles:
-        return {"success": False, "message": "Role must be Admin, Manager, Finance, or Employee"}
+        return {"success": False, "message": "Role must be Admin, Manager, Finance, Employee, Sales, or Sales Manager"}
 
     username = data.username.strip().lower()
     full_name = data.full_name.strip()
@@ -1162,6 +1201,215 @@ def admin_delete_user(username: str, user: Dict[str, Any] = Depends(require_role
         return {"success": False, "message": "User not found"}
 
     return {"success": True, "message": "User deleted successfully"}
+
+
+def build_sales_summary(rows: List[sqlite3.Row]) -> Dict[str, Any]:
+    total_amount = sum(float(row["total_amount"] or 0) for row in rows)
+    total_quantity = sum(float(row["quantity"] or 0) for row in rows)
+    transactions = len(rows)
+    avg_sale = safe_div(total_amount, transactions)
+    product_totals: Dict[str, float] = {}
+    rep_totals: Dict[str, float] = {}
+
+    for row in rows:
+        product = row["product_name"] or "-"
+        rep = row["sales_full_name"] or row["sales_username"] or "-"
+        product_totals[product] = product_totals.get(product, 0.0) + float(row["quantity"] or 0)
+        rep_totals[rep] = rep_totals.get(rep, 0.0) + float(row["total_amount"] or 0)
+
+    top_product = max(product_totals.items(), key=lambda item: item[1])[0] if product_totals else "-"
+    top_sales_rep = max(rep_totals.items(), key=lambda item: item[1])[0] if rep_totals else "-"
+
+    return {
+        "totalAmount": round(total_amount, 2),
+        "totalQuantity": round(total_quantity, 2),
+        "transactions": transactions,
+        "averageSale": round(avg_sale, 2),
+        "topProduct": top_product,
+        "topSalesRep": top_sales_rep,
+    }
+
+
+def sales_rows_to_response(rows: List[sqlite3.Row]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": row["id"],
+            "salesUsername": row["sales_username"],
+            "salesFullName": row["sales_full_name"],
+            "saleDate": row["sale_date"],
+            "customerName": row["customer_name"],
+            "productName": row["product_name"],
+            "quantity": float(row["quantity"] or 0),
+            "unitPrice": float(row["unit_price"] or 0),
+            "totalAmount": float(row["total_amount"] or 0),
+            "paymentMethod": row["payment_method"] or "",
+            "notes": row["notes"] or "",
+            "createdAt": row["created_at"],
+        }
+        for row in rows
+    ]
+
+
+def get_sales_user_display(username: str) -> Tuple[str, str]:
+    username_clean = (username or "").strip().lower()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, full_name, role, is_active FROM users WHERE username = ?", (username_clean,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Sales user not found")
+
+    role = normalize_role(row["role"])
+    if role not in {"Sales", "Sales Manager", "Admin"}:
+        raise HTTPException(status_code=400, detail="Selected user is not a sales user")
+
+    if not bool(row["is_active"]):
+        raise HTTPException(status_code=400, detail="Selected sales user is inactive")
+
+    return row["username"], row["full_name"]
+
+
+@app.get("/sales/users")
+def sales_users(user: Dict[str, Any] = Depends(require_roles("Admin", "Sales Manager"))):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT username, full_name, role
+        FROM users
+        WHERE is_active = 1 AND role IN ('Sales', 'Sales Manager')
+        ORDER BY full_name ASC
+        """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return {
+        "success": True,
+        "users": [
+            {"username": row["username"], "fullName": row["full_name"], "role": row["role"]}
+            for row in rows
+        ],
+    }
+
+
+@app.post("/sales")
+def create_sale(data: SalesCreateInput, user: Dict[str, Any] = Depends(require_roles("Admin", "Sales Manager", "Sales"))):
+    role = normalize_role(user.get("role", ""))
+    sales_username = user.get("username", "")
+    sales_full_name = user.get("fullName", "")
+
+    if role in {"Admin", "Sales Manager"} and data.sales_username:
+        sales_username, sales_full_name = get_sales_user_display(data.sales_username)
+
+    customer = data.customer_name.strip()
+    product = data.product_name.strip()
+    if not customer or not product:
+        return {"success": False, "message": "Customer name and product name are required"}
+
+    if data.quantity <= 0 or data.unit_price < 0:
+        return {"success": False, "message": "Quantity must be greater than 0 and unit price cannot be negative"}
+
+    sale_date = data.sale_date.strip() if data.sale_date else datetime.now().date().isoformat()
+    total_amount = round(float(data.quantity) * float(data.unit_price), 2)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO sales_transactions
+        (sales_username, sales_full_name, sale_date, customer_name, product_name,
+         quantity, unit_price, total_amount, payment_method, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            sales_username,
+            sales_full_name,
+            sale_date,
+            customer,
+            product,
+            float(data.quantity),
+            float(data.unit_price),
+            total_amount,
+            data.payment_method.strip(),
+            data.notes.strip(),
+            datetime.now().isoformat(),
+        ),
+    )
+    conn.commit()
+    sale_id = cursor.lastrowid
+    conn.close()
+
+    return {"success": True, "message": "Sale saved successfully", "saleId": sale_id, "totalAmount": total_amount}
+
+
+@app.get("/sales/report")
+def sales_report(
+    sales_username: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    user: Dict[str, Any] = Depends(require_roles("Admin", "Sales Manager", "Sales")),
+):
+    role = normalize_role(user.get("role", ""))
+    params: List[Any] = []
+    where = ["1=1"]
+
+    if role == "Sales":
+        where.append("sales_username = ?")
+        params.append(user.get("username"))
+    elif sales_username and sales_username != "all":
+        where.append("sales_username = ?")
+        params.append(sales_username.strip().lower())
+
+    if from_date:
+        where.append("sale_date >= ?")
+        params.append(from_date)
+    if to_date:
+        where.append("sale_date <= ?")
+        params.append(to_date)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"""
+        SELECT *
+        FROM sales_transactions
+        WHERE {' AND '.join(where)}
+        ORDER BY sale_date DESC, id DESC
+        """,
+        tuple(params),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return {
+        "success": True,
+        "sales": sales_rows_to_response(rows),
+        "summary": build_sales_summary(rows),
+    }
+
+
+@app.delete("/sales/{sale_id}")
+def delete_sale(sale_id: int, user: Dict[str, Any] = Depends(require_roles("Admin", "Sales Manager", "Sales"))):
+    role = normalize_role(user.get("role", ""))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if role == "Sales":
+        cursor.execute("DELETE FROM sales_transactions WHERE id = ? AND sales_username = ?", (sale_id, user.get("username")))
+    else:
+        cursor.execute("DELETE FROM sales_transactions WHERE id = ?", (sale_id,))
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    if deleted == 0:
+        return {"success": False, "message": "Sale not found or you do not have permission to delete it"}
+
+    return {"success": True, "message": "Sale deleted successfully"}
+
+
 
 @app.get("/business/status")
 def business_status(user: Dict[str, Any] = Depends(get_current_user)):

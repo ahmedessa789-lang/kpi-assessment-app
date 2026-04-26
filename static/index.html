@@ -738,6 +738,16 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 .user-action-btn.delete{background:linear-gradient(90deg,#dc2626,#ef4444);}
 .user-action-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 
+
+.sales-summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px;}
+.sales-summary-card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,18,32,.96));padding:20px;border-radius:18px;border:1px solid rgba(148,163,184,.10);box-shadow:0 8px 20px rgba(0,0,0,.18);}
+.sales-summary-card h4{color:#94a3b8;font-size:13px;margin-bottom:10px;}
+.sales-summary-card p{font-size:24px;font-weight:800;color:#f8fafc;}
+.sales-report-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
+.sales-report-tools input,.sales-report-tools select{min-width:180px;}
+.sales-manager-only{display:none;}
+@media(max-width:1000px){.sales-summary-grid{grid-template-columns:1fr;}}
+
 </style>
 </head>
 
@@ -809,6 +819,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <li class="side-link active-side" onclick="showView('executive')">CEO Dashboard</li>
 <li class="side-link" onclick="showView('analytics')">AI Analysis</li>
 <li class="side-link" onclick="showView('finance')">Finance</li>
+<li class="side-link" onclick="showView('sales')">Sales</li>
 <li class="side-link" onclick="showView('table')">Reports Table</li>
 <li class="side-link" id="usersSideLink" onclick="showView('users')">Users Management</li>
 <li class="side-link" id="businessSideLink" onclick="showView('business')">Business Control</li>
@@ -829,6 +840,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div class="view-switcher">
 <button class="view-btn active-view" data-view="executive" onclick="showView('executive')">Executive</button>
 <button class="view-btn" data-view="finance" onclick="showView('finance')">Finance</button>
+<button class="view-btn" data-view="sales" onclick="showView('sales')">Sales</button>
 <button class="view-btn" data-view="analytics" onclick="showView('analytics')">Analytics</button>
 <button class="view-btn" data-view="table" onclick="showView('table')">Table</button>
 <button class="view-btn" id="usersViewBtn" data-view="users" onclick="showView('users')">Users</button>
@@ -1000,6 +1012,77 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 </div>
 </div>
 
+
+<div id="salesView" class="dashboard-view hidden-view">
+<div class="section">
+<h2>Sales Module Premium</h2>
+<p style="color:#93c5fd;margin-bottom:18px;">Register sales transactions, calculate totals automatically, and export reports by sales rep or all sales team.</p>
+
+<div class="form-grid">
+<input type="date" id="sale_date">
+<select id="sale_rep_select" class="sales-manager-only">
+<option value="">Select Sales Rep</option>
+</select>
+<input type="text" id="sale_customer" placeholder="Customer Name">
+<input type="text" id="sale_product" placeholder="Product / Item Sold">
+<input type="number" id="sale_quantity" placeholder="Quantity" step="0.01">
+<input type="number" id="sale_unit_price" placeholder="Unit Price" step="0.01">
+<input type="text" id="sale_payment_method" placeholder="Payment Method" value="Cash">
+<input type="text" id="sale_notes" placeholder="Notes">
+</div>
+
+<div class="sales-report-tools">
+<button type="button" onclick="saveSaleTransaction()">Save Sale</button>
+<button type="button" onclick="loadSalesReport()">Refresh Report</button>
+<button type="button" onclick="exportSalesExcel()">Export Excel</button>
+<button type="button" onclick="exportSalesPDF()">Export PDF</button>
+</div>
+<p id="salesMsg" style="margin-top:12px;color:#93c5fd;min-height:20px;"></p>
+</div>
+
+<div class="section">
+<h2>Sales Report Filters</h2>
+<div class="sales-report-tools">
+<select id="sales_filter_rep" class="sales-manager-only">
+<option value="all">All Sales Reps</option>
+</select>
+<input type="date" id="sales_from_date">
+<input type="date" id="sales_to_date">
+<button type="button" onclick="loadSalesReport()">Apply Filter</button>
+</div>
+</div>
+
+<div class="sales-summary-grid">
+<div class="sales-summary-card"><h4>Total Sales Amount</h4><p id="salesTotalAmount">0</p></div>
+<div class="sales-summary-card"><h4>Total Quantity</h4><p id="salesTotalQuantity">0</p></div>
+<div class="sales-summary-card"><h4>Transactions</h4><p id="salesTransactions">0</p></div>
+<div class="sales-summary-card"><h4>Average Sale</h4><p id="salesAverageSale">0</p></div>
+<div class="sales-summary-card"><h4>Top Product</h4><p id="salesTopProduct" style="font-size:18px;">-</p></div>
+</div>
+
+<div class="section">
+<h2>Sales Transactions</h2>
+<table class="pro-table">
+<thead>
+<tr>
+<th>Date</th>
+<th>Sales Rep</th>
+<th>Customer</th>
+<th>Product</th>
+<th>Qty</th>
+<th>Unit Price</th>
+<th>Total</th>
+<th>Payment</th>
+<th>Notes</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="salesTableBody"><tr><td colspan="10">No sales loaded yet.</td></tr></tbody>
+</table>
+</div>
+</div>
+
+
 <div id="analyticsView" class="dashboard-view hidden-view">
 <div class="section">
 <h2>Chart</h2>
@@ -1076,6 +1159,8 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <option value="Manager">Manager</option>
 <option value="Finance">Finance</option>
 <option value="Employee">Employee</option>
+<option value="Sales">Sales</option>
+<option value="Sales Manager">Sales Manager</option>
 </select>
 </div>
 <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -1290,7 +1375,7 @@ const normalizedRole = String(role || "").toLowerCase().trim();
 const sideLinks = document.querySelectorAll(".side-link");
 
 const allowView = (name, allowed) => {
-const sideMap = { executive:0, analytics:1, finance:2, table:3, users:4, business:5 };
+const sideMap = { executive:0, analytics:1, finance:2, sales:3, table:4, users:5, business:6 };
 const viewBtn = document.querySelector(`.view-btn[data-view="${name}"]`);
 const sideLink = sideLinks[sideMap[name]];
 if(viewBtn) viewBtn.style.display = allowed ? "inline-block" : "none";
@@ -1313,42 +1398,78 @@ if(financeImportBtn) financeImportBtn.style.display = allowed ? "inline-block" :
 if(financeExportBtn) financeExportBtn.style.display = allowed ? "inline-block" : "none";
 };
 
+const setSalesManagerControls = (allowed) => {
+document.querySelectorAll(".sales-manager-only").forEach(el => {
+el.style.display = allowed ? "inline-block" : "none";
+});
+};
+
 if(normalizedRole === "finance"){
 allowView("executive", false);
 allowView("analytics", false);
 allowView("finance", true);
+allowView("sales", false);
 allowView("table", false);
 allowView("users", false);
 allowView("business", false);
 toggleCEOImport(false);
 toggleFinanceActions(true);
-}else if(normalizedRole === "employee"){
-allowView("executive", true);
-allowView("analytics", true);
+setSalesManagerControls(false);
+}else if(normalizedRole === "sales"){
+allowView("executive", false);
+allowView("analytics", false);
 allowView("finance", false);
+allowView("sales", true);
 allowView("table", false);
 allowView("users", false);
 allowView("business", false);
 toggleCEOImport(false);
 toggleFinanceActions(false);
+setSalesManagerControls(false);
+}else if(normalizedRole === "sales manager"){
+allowView("executive", false);
+allowView("analytics", false);
+allowView("finance", false);
+allowView("sales", true);
+allowView("table", true);
+allowView("users", false);
+allowView("business", false);
+toggleCEOImport(false);
+toggleFinanceActions(false);
+setSalesManagerControls(true);
+}else if(normalizedRole === "employee"){
+allowView("executive", true);
+allowView("analytics", true);
+allowView("finance", false);
+allowView("sales", false);
+allowView("table", false);
+allowView("users", false);
+allowView("business", false);
+toggleCEOImport(false);
+toggleFinanceActions(false);
+setSalesManagerControls(false);
 }else if(normalizedRole === "manager" || normalizedRole === "general manager"){
 allowView("executive", true);
 allowView("analytics", true);
 allowView("finance", false);
+allowView("sales", false);
 allowView("table", true);
 allowView("users", false);
 allowView("business", false);
 toggleCEOImport(true);
 toggleFinanceActions(false);
+setSalesManagerControls(false);
 }else{
 allowView("executive", true);
 allowView("analytics", true);
 allowView("finance", true);
+allowView("sales", true);
 allowView("table", true);
 allowView("users", true);
 allowView("business", true);
 toggleCEOImport(true);
 toggleFinanceActions(true);
+setSalesManagerControls(true);
 }
 }
 
@@ -1953,7 +2074,7 @@ XLSX.writeFile(wb, "Reap Service_Financial_Report.xlsx");
 }
 
 function showView(view){
-const views = ["executive","finance","analytics","table","users","business"];
+const views = ["executive","finance","sales","analytics","table","users","business"];
 
 views.forEach(v=>{
 const el = document.getElementById(v + "View");
@@ -1982,16 +2103,16 @@ document.querySelectorAll(".side-link").forEach(item=>{
 item.classList.remove("active-side");
 });
 
-if(view === "executive") document.querySelectorAll(".side-link")[0]?.classList.add("active-side");
-if(view === "analytics") document.querySelectorAll(".side-link")[1]?.classList.add("active-side");
-if(view === "finance") document.querySelectorAll(".side-link")[2]?.classList.add("active-side");
-if(view === "table") document.querySelectorAll(".side-link")[3]?.classList.add("active-side");
-if(view === "users") document.querySelectorAll(".side-link")[4]?.classList.add("active-side");
-if(view === "business") document.querySelectorAll(".side-link")[5]?.classList.add("active-side");
+const sideMap = { executive:0, analytics:1, finance:2, sales:3, table:4, users:5, business:6 };
+if(sideMap[view] !== undefined) document.querySelectorAll(".side-link")[sideMap[view]]?.classList.add("active-side");
 
 syncTable();
 if(view === "users") loadUsersList();
 if(view === "business") loadBusinessStatus();
+if(view === "sales") {
+loadSalesUsers();
+loadSalesReport();
+}
 }
 
 function syncTable(){
@@ -2429,6 +2550,214 @@ console.error(error);
 setUsersMessage("Delete user failed.", false);
 }
 }
+
+
+let salesRowsCache = [];
+let salesUsersCache = [];
+
+function setSalesMessage(message, ok=true){
+const el = document.getElementById("salesMsg");
+if(!el) return;
+el.style.color = ok ? "#93c5fd" : "#fb7185";
+el.innerText = message || "";
+}
+
+function money(v){
+const n = Number(v || 0);
+return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+async function loadSalesUsers(){
+const user = getCurrentUser();
+const role = String(user?.role || "").toLowerCase();
+if(role !== "admin" && role !== "sales manager") return;
+
+try{
+const response = await apiFetch("/sales/users");
+const result = await response.json();
+salesUsersCache = result.users || [];
+
+const selects = [document.getElementById("sale_rep_select"), document.getElementById("sales_filter_rep")];
+selects.forEach((select, index) => {
+if(!select) return;
+const first = index === 0 ? `<option value="">Select Sales Rep</option>` : `<option value="all">All Sales Reps</option>`;
+select.innerHTML = first + salesUsersCache.map(u => `<option value="${escapeHTML(u.username)}">${escapeHTML(u.fullName)} (${escapeHTML(u.username)})</option>`).join("");
+});
+}catch(error){
+console.error(error);
+}
+}
+
+function getSalesPayload(){
+const user = getCurrentUser();
+const role = String(user?.role || "").toLowerCase();
+const payload = {
+sale_date: document.getElementById("sale_date")?.value || new Date().toISOString().slice(0,10),
+customer_name: document.getElementById("sale_customer")?.value.trim() || "",
+product_name: document.getElementById("sale_product")?.value.trim() || "",
+quantity: Number(document.getElementById("sale_quantity")?.value || 0),
+unit_price: Number(document.getElementById("sale_unit_price")?.value || 0),
+payment_method: document.getElementById("sale_payment_method")?.value.trim() || "Cash",
+notes: document.getElementById("sale_notes")?.value.trim() || ""
+};
+if(role === "admin" || role === "sales manager"){
+payload.sales_username = document.getElementById("sale_rep_select")?.value || "";
+}
+return payload;
+}
+
+async function saveSaleTransaction(){
+const payload = getSalesPayload();
+if(!payload.customer_name || !payload.product_name || payload.quantity <= 0){
+setSalesMessage("Please enter customer, product, and valid quantity.", false);
+return;
+}
+try{
+const response = await apiFetch("/sales", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(payload)
+});
+const result = await response.json();
+setSalesMessage(result.message || "Sale saved.", !!result.success);
+if(result.success){
+["sale_customer","sale_product","sale_quantity","sale_unit_price","sale_notes"].forEach(id => {
+const el = document.getElementById(id);
+if(el) el.value = "";
+});
+loadSalesReport();
+}
+}catch(error){
+console.error(error);
+setSalesMessage("Sale save failed.", false);
+}
+}
+
+async function loadSalesReport(){
+const user = getCurrentUser();
+if(!user) return;
+const role = String(user.role || "").toLowerCase();
+const params = new URLSearchParams();
+const selectedRep = document.getElementById("sales_filter_rep")?.value || "all";
+const fromDate = document.getElementById("sales_from_date")?.value || "";
+const toDate = document.getElementById("sales_to_date")?.value || "";
+
+if((role === "admin" || role === "sales manager") && selectedRep && selectedRep !== "all"){
+params.append("sales_username", selectedRep);
+}
+if(fromDate) params.append("from_date", fromDate);
+if(toDate) params.append("to_date", toDate);
+
+try{
+const response = await apiFetch("/sales/report" + (params.toString() ? "?" + params.toString() : ""));
+const result = await response.json();
+salesRowsCache = result.sales || [];
+renderSalesReport(result.summary || {});
+}catch(error){
+console.error(error);
+const body = document.getElementById("salesTableBody");
+if(body) body.innerHTML = `<tr><td colspan="10">Failed to load sales report.</td></tr>`;
+}
+}
+
+function renderSalesReport(summary){
+document.getElementById("salesTotalAmount").innerText = money(summary.totalAmount || 0);
+document.getElementById("salesTotalQuantity").innerText = money(summary.totalQuantity || 0);
+document.getElementById("salesTransactions").innerText = summary.transactions || 0;
+document.getElementById("salesAverageSale").innerText = money(summary.averageSale || 0);
+document.getElementById("salesTopProduct").innerText = summary.topProduct || "-";
+
+const body = document.getElementById("salesTableBody");
+if(!body) return;
+if(!salesRowsCache.length){
+body.innerHTML = `<tr><td colspan="10">No sales transactions found.</td></tr>`;
+return;
+}
+body.innerHTML = salesRowsCache.map(row => `
+<tr>
+<td>${escapeHTML(row.saleDate || "-")}</td>
+<td>${escapeHTML(row.salesFullName || row.salesUsername || "-")}</td>
+<td>${escapeHTML(row.customerName || "-")}</td>
+<td>${escapeHTML(row.productName || "-")}</td>
+<td>${money(row.quantity)}</td>
+<td>${money(row.unitPrice)}</td>
+<td>${money(row.totalAmount)}</td>
+<td>${escapeHTML(row.paymentMethod || "-")}</td>
+<td>${escapeHTML(row.notes || "-")}</td>
+<td><button type="button" class="user-action-btn delete" onclick="deleteSaleTransaction(${row.id})">Delete</button></td>
+</tr>
+`).join("");
+}
+
+async function deleteSaleTransaction(id){
+if(!confirm("Delete this sale transaction?")) return;
+try{
+const response = await apiFetch(`/sales/${id}`, { method:"DELETE" });
+const result = await response.json();
+setSalesMessage(result.message || "Sale deleted", !!result.success);
+if(result.success) loadSalesReport();
+}catch(error){
+console.error(error);
+setSalesMessage("Delete sale failed.", false);
+}
+}
+
+function exportSalesExcel(){
+const rows = salesRowsCache.map(r => ({
+Date: r.saleDate,
+Sales_Rep: r.salesFullName,
+Username: r.salesUsername,
+Customer: r.customerName,
+Product: r.productName,
+Quantity: r.quantity,
+Unit_Price: r.unitPrice,
+Total: r.totalAmount,
+Payment: r.paymentMethod,
+Notes: r.notes
+}));
+if(!rows.length){
+setSalesMessage("No sales data to export.", false);
+return;
+}
+const ws = XLSX.utils.json_to_sheet(rows);
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
+XLSX.writeFile(wb, "Sales_Report.xlsx");
+}
+
+function exportSalesPDF(){
+if(!salesRowsCache.length){
+setSalesMessage("No sales data to export.", false);
+return;
+}
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+doc.setFontSize(18);
+doc.text("Sales Report", 14, 18);
+doc.setFontSize(10);
+doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+let y = 36;
+doc.setFontSize(9);
+salesRowsCache.slice(0, 35).forEach((r, index) => {
+const line = `${index+1}. ${r.saleDate} | ${r.salesFullName} | ${r.customerName} | ${r.productName} | Qty: ${r.quantity} | Total: ${money(r.totalAmount)}`;
+doc.text(line.substring(0, 110), 14, y);
+y += 7;
+if(y > 280){
+doc.addPage();
+y = 18;
+}
+});
+doc.save("Sales_Report.pdf");
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+const dateInput = document.getElementById("sale_date");
+if(dateInput && !dateInput.value){
+dateInput.value = new Date().toISOString().slice(0,10);
+}
+});
+
 
 async function loadBusinessStatus(){
 const user = getCurrentUser();
