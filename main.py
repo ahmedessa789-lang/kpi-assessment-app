@@ -1108,6 +1108,61 @@ def admin_change_user_password(data: AdminChangePasswordInput, user: Dict[str, A
     return {"success": True, "message": "User password changed and old sessions logged out"}
 
 
+
+@app.post("/admin/toggle-user-status")
+def admin_toggle_user_status(data: AdminChangePasswordInput, user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    username = data.username.strip().lower()
+    requested_status = data.new_password.strip().lower()
+
+    if username == "admin":
+        return {"success": False, "message": "Main admin account cannot be disabled"}
+
+    if username == user.get("username", "").strip().lower():
+        return {"success": False, "message": "You cannot disable your own active session account"}
+
+    if requested_status not in {"active", "inactive", "1", "0", "true", "false"}:
+        return {"success": False, "message": "Invalid status value"}
+
+    is_active = 1 if requested_status in {"active", "1", "true"} else 0
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET is_active = ? WHERE username = ?", (is_active, username))
+    updated = cursor.rowcount
+    if is_active == 0:
+        cursor.execute("DELETE FROM sessions WHERE username = ?", (username,))
+    conn.commit()
+    conn.close()
+
+    if updated == 0:
+        return {"success": False, "message": "User not found"}
+
+    return {"success": True, "message": "User status updated successfully"}
+
+
+@app.delete("/admin/users/{username}")
+def admin_delete_user(username: str, user: Dict[str, Any] = Depends(require_roles("Admin"))):
+    username_clean = username.strip().lower()
+
+    if username_clean == "admin":
+        return {"success": False, "message": "Main admin account cannot be deleted"}
+
+    if username_clean == user.get("username", "").strip().lower():
+        return {"success": False, "message": "You cannot delete your own account while logged in"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE username = ?", (username_clean,))
+    deleted = cursor.rowcount
+    cursor.execute("DELETE FROM sessions WHERE username = ?", (username_clean,))
+    conn.commit()
+    conn.close()
+
+    if deleted == 0:
+        return {"success": False, "message": "User not found"}
+
+    return {"success": True, "message": "User deleted successfully"}
+
 @app.get("/business/status")
 def business_status(user: Dict[str, Any] = Depends(get_current_user)):
     settings = get_business_settings()

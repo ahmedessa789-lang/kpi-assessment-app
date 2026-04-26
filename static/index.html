@@ -727,6 +727,17 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 .price-card p{color:#cbd5e1;line-height:1.7;font-size:14px;}
 @media(max-width:1000px){.business-grid,.price-grid{grid-template-columns:1fr;}}
 
+.premium-users-table td{vertical-align:middle;}
+.user-status-badge{display:inline-block;padding:7px 12px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid rgba(255,255,255,.10);}
+.user-status-badge.active{color:#4ade80;background:rgba(34,197,94,.10);}
+.user-status-badge.inactive{color:#fb7185;background:rgba(239,68,68,.10);}
+.user-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.user-action-btn{padding:9px 10px;border-radius:10px;font-size:12px;box-shadow:none;}
+.user-action-btn.reset{background:linear-gradient(90deg,#0891b2,#2563eb);}
+.user-action-btn.toggle{background:linear-gradient(90deg,#7c3aed,#4f46e5);}
+.user-action-btn.delete{background:linear-gradient(90deg,#dc2626,#ef4444);}
+.user-action-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
 </style>
 </head>
 
@@ -1054,7 +1065,8 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 
 <div id="usersView" class="dashboard-view hidden-view">
 <div class="section">
-<h2>Create User Account</h2>
+<h2>User Management Premium</h2>
+<p style="color:#93c5fd;margin-bottom:18px;line-height:1.7;">Admin can create users, reset passwords, activate/deactivate accounts, search users, and delete non-main accounts securely.</p>
 <div class="form-grid">
 <input type="text" id="new_full_name" placeholder="Full Name">
 <input type="text" id="new_username" placeholder="Username">
@@ -1074,10 +1086,13 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 </div>
 
 <div class="section">
-<h2>Users List</h2>
-<table class="pro-table">
-<thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th></tr></thead>
-<tbody id="usersTableBody"><tr><td colspan="5">No users loaded yet.</td></tr></tbody>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+<h2 style="margin:0;">Users List</h2>
+<input type="text" id="usersSearch" placeholder="Search by name, username, or role" oninput="renderUsersTable()" style="max-width:360px;width:100%;">
+</div>
+<table class="pro-table premium-users-table">
+<thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead>
+<tbody id="usersTableBody"><tr><td colspan="6">No users loaded yet.</td></tr></tbody>
 </table>
 </div>
 </div>
@@ -2250,31 +2265,89 @@ async function importExcel() {
     }
 }
 
+let premiumUsersCache = [];
+
+function escapeHTML(value){
+return String(value ?? "")
+.replaceAll("&", "&amp;")
+.replaceAll("<", "&lt;")
+.replaceAll(">", "&gt;")
+.replaceAll('"', "&quot;")
+.replaceAll("'", "&#039;");
+}
+
+function setUsersMessage(message, success = true){
+const msg = document.getElementById("usersMsg");
+if(!msg) return;
+msg.style.color = success ? "#4ade80" : "#fb7185";
+msg.innerText = message || "";
+}
+
+function renderUsersTable(){
+const body = document.getElementById("usersTableBody");
+if(!body) return;
+const search = String(document.getElementById("usersSearch")?.value || "").toLowerCase().trim();
+const current = getCurrentUser();
+const currentUsername = String(current?.username || "").toLowerCase();
+
+const filtered = premiumUsersCache.filter(u => {
+const text = `${u.fullName || ""} ${u.username || ""} ${u.role || ""}`.toLowerCase();
+return !search || text.includes(search);
+});
+
+if(!filtered.length){
+body.innerHTML = `<tr><td colspan="6">No users found.</td></tr>`;
+return;
+}
+
+body.innerHTML = filtered.map(u => {
+const username = String(u.username || "");
+const usernameLower = username.toLowerCase();
+const isMainAdmin = usernameLower === "admin";
+const isSelf = usernameLower === currentUsername;
+const statusClass = u.isActive ? "active" : "inactive";
+const statusText = u.isActive ? "Active" : "Inactive";
+const toggleText = u.isActive ? "Disable" : "Enable";
+const safeUser = escapeHTML(username);
+const disabledDelete = (isMainAdmin || isSelf) ? "disabled" : "";
+const disabledToggle = (isMainAdmin || isSelf) ? "disabled" : "";
+
+return `
+<tr>
+<td>${escapeHTML(u.fullName || "-")}</td>
+<td>${escapeHTML(username || "-")}</td>
+<td>${escapeHTML(u.role || "-")}</td>
+<td><span class="user-status-badge ${statusClass}">${statusText}</span></td>
+<td>${escapeHTML(u.createdAt || "-")}</td>
+<td>
+  <div class="user-actions">
+    <button type="button" class="user-action-btn reset" onclick="resetUserPassword('${safeUser}')">Reset Password</button>
+    <button type="button" class="user-action-btn toggle" ${disabledToggle} onclick="toggleUserStatus('${safeUser}', ${u.isActive ? "false" : "true"})">${toggleText}</button>
+    <button type="button" class="user-action-btn delete" ${disabledDelete} onclick="deleteUserAccount('${safeUser}')">Delete</button>
+  </div>
+</td>
+</tr>`;
+}).join("");
+}
+
 async function loadUsersList(){
 const user = getCurrentUser();
 if(String(user?.role || "").toLowerCase() !== "admin") return;
 const body = document.getElementById("usersTableBody");
 if(!body) return;
-body.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
+body.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
 try{
 const response = await apiFetch("/users/list");
 const result = await response.json();
-const users = result.users || [];
-body.innerHTML = users.length ? users.map(u => `
-<tr>
-<td>${u.fullName || "-"}</td>
-<td>${u.username || "-"}</td>
-<td>${u.role || "-"}</td>
-<td>${u.isActive ? "Active" : "Inactive"}</td>
-<td>${u.createdAt || "-"}</td>
-</tr>`).join("") : `<tr><td colspan="5">No users found.</td></tr>`;
+premiumUsersCache = result.users || [];
+renderUsersTable();
 }catch(error){
 console.error(error);
-body.innerHTML = `<tr><td colspan="5">Failed to load users.</td></tr>`;
+body.innerHTML = `<tr><td colspan="6">Failed to load users.</td></tr>`;
 }
 }
+
 async function createUserAccount(){
-const msg = document.getElementById("usersMsg");
 const payload = {
 full_name: document.getElementById("new_full_name")?.value.trim() || "",
 username: document.getElementById("new_username")?.value.trim() || "",
@@ -2282,7 +2355,7 @@ password: document.getElementById("new_password")?.value.trim() || "",
 role: document.getElementById("new_role")?.value || "Employee"
 };
 if(!payload.full_name || !payload.username || !payload.password){
-if(msg) msg.innerText = "Please fill full name, username, and password.";
+setUsersMessage("Please fill full name, username, and password.", false);
 return;
 }
 try{
@@ -2292,10 +2365,7 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify(payload)
 });
 const result = await response.json();
-if(msg){
-msg.style.color = result.success ? "#4ade80" : "#fb7185";
-msg.innerText = result.message || (result.success ? "User created successfully" : "User creation failed");
-}
+setUsersMessage(result.message || (result.success ? "User created successfully" : "User creation failed"), !!result.success);
 if(result.success){
 document.getElementById("new_full_name").value = "";
 document.getElementById("new_username").value = "";
@@ -2304,10 +2374,61 @@ loadUsersList();
 }
 }catch(error){
 console.error(error);
-if(msg){ msg.style.color = "#fb7185"; msg.innerText = "User creation failed."; }
+setUsersMessage("User creation failed.", false);
 }
 }
 
+async function resetUserPassword(username){
+const newPassword = prompt(`Enter new password for ${username}:`);
+if(!newPassword) return;
+if(newPassword.length < 8){
+setUsersMessage("Password must be at least 8 characters.", false);
+return;
+}
+try{
+const response = await apiFetch("/admin/change-user-password", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({ username, new_password: newPassword })
+});
+const result = await response.json();
+setUsersMessage(result.message || "Password updated", !!result.success);
+}catch(error){
+console.error(error);
+setUsersMessage("Password reset failed.", false);
+}
+}
+
+async function toggleUserStatus(username, activate){
+const action = activate ? "enable" : "disable";
+if(!confirm(`Are you sure you want to ${action} ${username}?`)) return;
+try{
+const response = await apiFetch("/admin/toggle-user-status", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({ username, new_password: activate ? "active" : "inactive" })
+});
+const result = await response.json();
+setUsersMessage(result.message || "Status updated", !!result.success);
+if(result.success) loadUsersList();
+}catch(error){
+console.error(error);
+setUsersMessage("Status update failed.", false);
+}
+}
+
+async function deleteUserAccount(username){
+if(!confirm(`Delete user ${username}? This action cannot be undone.`)) return;
+try{
+const response = await apiFetch(`/admin/users/${encodeURIComponent(username)}`, { method:"DELETE" });
+const result = await response.json();
+setUsersMessage(result.message || "User deleted", !!result.success);
+if(result.success) loadUsersList();
+}catch(error){
+console.error(error);
+setUsersMessage("Delete user failed.", false);
+}
+}
 
 async function loadBusinessStatus(){
 const user = getCurrentUser();
