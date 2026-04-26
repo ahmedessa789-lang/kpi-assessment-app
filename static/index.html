@@ -748,6 +748,16 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 .sales-manager-only{display:none;}
 @media(max-width:1000px){.sales-summary-grid{grid-template-columns:1fr;}}
 
+.sales-analytics-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-bottom:20px;}
+.sales-chart-card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,18,32,.96));padding:22px;border-radius:18px;border:1px solid rgba(148,163,184,.10);box-shadow:0 10px 24px rgba(0,0,0,.18);}
+.sales-chart-card h3{margin-bottom:14px;color:#f8fafc;}
+.sales-insight-list{display:grid;gap:12px;}
+.sales-insight-item{background:#0f172a;border:1px solid rgba(148,163,184,.10);border-radius:14px;padding:14px;}
+.sales-insight-item span{display:block;color:#94a3b8;font-size:12px;margin-bottom:6px;}
+.sales-insight-item strong{display:block;color:#f8fafc;font-size:18px;line-height:1.45;}
+.sales-premium-report-btn{background:linear-gradient(90deg,#22c55e,#06b6d4,#6366f1);}
+@media(max-width:1000px){.sales-analytics-grid{grid-template-columns:1fr;}}
+
 </style>
 </head>
 
@@ -1035,7 +1045,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <button type="button" onclick="saveSaleTransaction()">Save Sale</button>
 <button type="button" onclick="loadSalesReport()">Refresh Report</button>
 <button type="button" onclick="exportSalesExcel()">Export Excel</button>
-<button type="button" onclick="exportSalesPDF()">Export PDF</button>
+<button type="button" onclick="exportSalesPremiumPDF()">Export Premium PDF</button>
 </div>
 <p id="salesMsg" style="margin-top:12px;color:#93c5fd;min-height:20px;"></p>
 </div>
@@ -1058,6 +1068,38 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div class="sales-summary-card"><h4>Transactions</h4><p id="salesTransactions">0</p></div>
 <div class="sales-summary-card"><h4>Average Sale</h4><p id="salesAverageSale">0</p></div>
 <div class="sales-summary-card"><h4>Top Product</h4><p id="salesTopProduct" style="font-size:18px;">-</p></div>
+</div>
+
+<div class="section">
+<h2>Sales Analytics Premium</h2>
+<div class="sales-analytics-grid">
+<div class="sales-chart-card">
+<h3>Sales Amount by Sales Rep</h3>
+<canvas id="salesRepChart" height="130" style="max-height:320px;"></canvas>
+</div>
+<div class="sales-chart-card">
+<h3>Product Performance</h3>
+<canvas id="salesProductChart" height="130" style="max-height:320px;"></canvas>
+</div>
+</div>
+<div class="sales-analytics-grid">
+<div class="sales-chart-card">
+<h3>Monthly Sales Trend</h3>
+<canvas id="salesTrendChart" height="120" style="max-height:300px;"></canvas>
+</div>
+<div class="sales-chart-card">
+<h3>Executive Insights</h3>
+<div class="sales-insight-list">
+<div class="sales-insight-item"><span>Best Sales Rep</span><strong id="salesBestRep">-</strong></div>
+<div class="sales-insight-item"><span>Top Customer</span><strong id="salesTopCustomer">-</strong></div>
+<div class="sales-insight-item"><span>Top Product by Amount</span><strong id="salesTopProductAmount">-</strong></div>
+<div class="sales-insight-item"><span>Sales Recommendation</span><strong id="salesRecommendation">Add sales transactions to generate insights.</strong></div>
+</div>
+</div>
+</div>
+<div class="sales-report-tools">
+<button type="button" class="sales-premium-report-btn" onclick="exportSalesPremiumPDF()">Export Premium Sales Report</button>
+</div>
 </div>
 
 <div class="section">
@@ -2554,6 +2596,10 @@ setUsersMessage("Delete user failed.", false);
 
 let salesRowsCache = [];
 let salesUsersCache = [];
+let salesReportSummaryCache = {};
+let salesRepChartInstance = null;
+let salesProductChartInstance = null;
+let salesTrendChartInstance = null;
 
 function setSalesMessage(message, ok=true){
 const el = document.getElementById("salesMsg");
@@ -2660,12 +2706,116 @@ if(body) body.innerHTML = `<tr><td colspan="10">Failed to load sales report.</td
 }
 }
 
+function getSalesAnalytics(){
+const rows = salesRowsCache || [];
+const byRep = {};
+const byProductQty = {};
+const byProductAmount = {};
+const byCustomer = {};
+const byMonth = {};
+
+rows.forEach(r => {
+const rep = r.salesFullName || r.salesUsername || "-";
+const product = r.productName || "-";
+const customer = r.customerName || "-";
+const amount = Number(r.totalAmount || 0);
+const qty = Number(r.quantity || 0);
+const month = (r.saleDate || "").slice(0,7) || "Unknown";
+
+byRep[rep] = (byRep[rep] || 0) + amount;
+byProductQty[product] = (byProductQty[product] || 0) + qty;
+byProductAmount[product] = (byProductAmount[product] || 0) + amount;
+byCustomer[customer] = (byCustomer[customer] || 0) + amount;
+byMonth[month] = (byMonth[month] || 0) + amount;
+});
+
+const sortEntries = (obj) => Object.entries(obj).sort((a,b) => Number(b[1]) - Number(a[1]));
+const topRep = sortEntries(byRep)[0] || ["-", 0];
+const topCustomer = sortEntries(byCustomer)[0] || ["-", 0];
+const topProductAmount = sortEntries(byProductAmount)[0] || ["-", 0];
+
+return {
+byRep,
+byProductQty,
+byProductAmount,
+byCustomer,
+byMonth,
+topRep,
+topCustomer,
+topProductAmount
+};
+}
+
+function updateSalesCharts(){
+const analytics = getSalesAnalytics();
+
+const repLabels = Object.keys(analytics.byRep).slice(0, 8);
+const repValues = repLabels.map(label => analytics.byRep[label]);
+
+const productLabels = Object.keys(analytics.byProductQty).slice(0, 8);
+const productValues = productLabels.map(label => analytics.byProductQty[label]);
+
+const monthLabels = Object.keys(analytics.byMonth).sort();
+const monthValues = monthLabels.map(label => analytics.byMonth[label]);
+
+const chartOptions = {
+responsive:true,
+plugins:{legend:{labels:{color:"#e2e8f0"}}},
+scales:{
+x:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.10)"}},
+y:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.10)"}}
+}
+};
+
+const repCanvas = document.getElementById("salesRepChart");
+if(repCanvas){
+if(salesRepChartInstance) salesRepChartInstance.destroy();
+salesRepChartInstance = new Chart(repCanvas, {
+type:"bar",
+data:{labels:repLabels.length ? repLabels : ["No Data"], datasets:[{label:"Sales Amount", data:repValues.length ? repValues : [0], backgroundColor:"rgba(34,211,238,.55)", borderColor:"rgba(34,211,238,1)", borderWidth:1}]},
+options:chartOptions
+});
+}
+
+const productCanvas = document.getElementById("salesProductChart");
+if(productCanvas){
+if(salesProductChartInstance) salesProductChartInstance.destroy();
+salesProductChartInstance = new Chart(productCanvas, {
+type:"doughnut",
+data:{labels:productLabels.length ? productLabels : ["No Data"], datasets:[{label:"Quantity", data:productValues.length ? productValues : [1], backgroundColor:["rgba(34,211,238,.65)","rgba(99,102,241,.65)","rgba(34,197,94,.65)","rgba(250,204,21,.65)","rgba(244,114,182,.65)","rgba(129,140,248,.65)","rgba(251,146,60,.65)","rgba(16,185,129,.65)"], borderColor:"rgba(15,23,42,1)", borderWidth:2}]},
+options:{responsive:true,plugins:{legend:{position:"bottom",labels:{color:"#e2e8f0"}}}}
+});
+}
+
+const trendCanvas = document.getElementById("salesTrendChart");
+if(trendCanvas){
+if(salesTrendChartInstance) salesTrendChartInstance.destroy();
+salesTrendChartInstance = new Chart(trendCanvas, {
+type:"line",
+data:{labels:monthLabels.length ? monthLabels : ["No Data"], datasets:[{label:"Monthly Sales", data:monthValues.length ? monthValues : [0], borderColor:"rgba(34,211,238,1)", backgroundColor:"rgba(34,211,238,.14)", fill:true, tension:.35}]},
+options:chartOptions
+});
+}
+
+document.getElementById("salesBestRep").innerText = `${analytics.topRep[0]} (${money(analytics.topRep[1])})`;
+document.getElementById("salesTopCustomer").innerText = `${analytics.topCustomer[0]} (${money(analytics.topCustomer[1])})`;
+document.getElementById("salesTopProductAmount").innerText = `${analytics.topProductAmount[0]} (${money(analytics.topProductAmount[1])})`;
+
+const recommendation = salesRowsCache.length
+? `Focus on ${analytics.topProductAmount[0]} and review the sales pattern of ${analytics.topRep[0]} to repeat the same performance with the rest of the team.`
+: "Add sales transactions to generate insights.";
+document.getElementById("salesRecommendation").innerText = recommendation;
+}
+
 function renderSalesReport(summary){
+salesReportSummaryCache = summary || {};
 document.getElementById("salesTotalAmount").innerText = money(summary.totalAmount || 0);
 document.getElementById("salesTotalQuantity").innerText = money(summary.totalQuantity || 0);
 document.getElementById("salesTransactions").innerText = summary.transactions || 0;
 document.getElementById("salesAverageSale").innerText = money(summary.averageSale || 0);
 document.getElementById("salesTopProduct").innerText = summary.topProduct || "-";
+
+updateSalesCharts();
 
 const body = document.getElementById("salesTableBody");
 if(!body) return;
@@ -2725,30 +2875,119 @@ XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
 XLSX.writeFile(wb, "Sales_Report.xlsx");
 }
 
-function exportSalesPDF(){
+function salesChartImage(chartInstance){
+try{
+return chartInstance ? chartInstance.toBase64Image() : null;
+}catch(error){
+return null;
+}
+}
+
+function exportSalesPremiumPDF(){
 if(!salesRowsCache.length){
 setSalesMessage("No sales data to export.", false);
 return;
 }
-const { jsPDF } = window.jspdf;
-const doc = new jsPDF();
-doc.setFontSize(18);
-doc.text("Sales Report", 14, 18);
-doc.setFontSize(10);
-doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
 
-let y = 36;
-doc.setFontSize(9);
-salesRowsCache.slice(0, 35).forEach((r, index) => {
-const line = `${index+1}. ${r.saleDate} | ${r.salesFullName} | ${r.customerName} | ${r.productName} | Qty: ${r.quantity} | Total: ${money(r.totalAmount)}`;
-doc.text(line.substring(0, 110), 14, y);
-y += 7;
-if(y > 280){
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF("p", "mm", "a4");
+const analytics = getSalesAnalytics();
+const summary = salesReportSummaryCache || {};
+const pageW = doc.internal.pageSize.getWidth();
+
+doc.setFillColor(6,16,31);
+doc.rect(0,0,pageW,297,"F");
+
+doc.setFillColor(15,23,42);
+doc.roundedRect(12,12,186,38,5,5,"F");
+doc.setTextColor(103,232,249);
+doc.setFontSize(20);
+doc.text("Sales Analytics Premium Report", 18, 27);
+doc.setTextColor(226,232,240);
+doc.setFontSize(10);
+doc.text(`Generated: ${new Date().toLocaleString()}`, 18, 36);
+doc.text(`Records: ${salesRowsCache.length}`, 18, 43);
+
+const cards = [
+["Total Sales", money(summary.totalAmount || 0)],
+["Transactions", String(summary.transactions || 0)],
+["Total Qty", money(summary.totalQuantity || 0)],
+["Average Sale", money(summary.averageSale || 0)]
+];
+
+let x = 12;
+cards.forEach((c, i) => {
+doc.setFillColor(15,23,42);
+doc.roundedRect(x,58,43,24,4,4,"F");
+doc.setTextColor(148,163,184);
+doc.setFontSize(8);
+doc.text(c[0], x+4, 67);
+doc.setTextColor(248,250,252);
+doc.setFontSize(12);
+doc.text(String(c[1]).substring(0,16), x+4, 77);
+x += 48;
+});
+
+doc.setFillColor(15,23,42);
+doc.roundedRect(12,90,186,52,5,5,"F");
+doc.setTextColor(103,232,249);
+doc.setFontSize(13);
+doc.text("Executive Insights", 18, 102);
+doc.setTextColor(226,232,240);
+doc.setFontSize(10);
+doc.text(`Best Sales Rep: ${analytics.topRep[0]} - ${money(analytics.topRep[1])}`, 18, 113);
+doc.text(`Top Customer: ${analytics.topCustomer[0]} - ${money(analytics.topCustomer[1])}`, 18, 123);
+doc.text(`Top Product: ${analytics.topProductAmount[0]} - ${money(analytics.topProductAmount[1])}`, 18, 133);
+
+const repImg = salesChartImage(salesRepChartInstance);
+const prodImg = salesChartImage(salesProductChartInstance);
+const trendImg = salesChartImage(salesTrendChartInstance);
+
+doc.setFillColor(15,23,42);
+doc.roundedRect(12,150,88,55,5,5,"F");
+doc.setTextColor(248,250,252);
+doc.setFontSize(11);
+doc.text("Sales by Rep", 18, 161);
+if(repImg) doc.addImage(repImg, "PNG", 17, 166, 78, 32);
+
+doc.setFillColor(15,23,42);
+doc.roundedRect(110,150,88,55,5,5,"F");
+doc.text("Product Performance", 116, 161);
+if(prodImg) doc.addImage(prodImg, "PNG", 122, 164, 58, 38);
+
+doc.setFillColor(15,23,42);
+doc.roundedRect(12,213,186,48,5,5,"F");
+doc.text("Monthly Sales Trend", 18, 224);
+if(trendImg) doc.addImage(trendImg, "PNG", 20, 228, 168, 26);
+
 doc.addPage();
+doc.setFillColor(6,16,31);
+doc.rect(0,0,pageW,297,"F");
+doc.setTextColor(103,232,249);
+doc.setFontSize(16);
+doc.text("Sales Transactions", 14, 18);
+
+let y = 30;
+doc.setFontSize(8);
+doc.setTextColor(226,232,240);
+salesRowsCache.slice(0, 45).forEach((r, index) => {
+const line = `${index+1}. ${r.saleDate} | ${r.salesFullName} | ${r.customerName} | ${r.productName} | Qty ${r.quantity} | Total ${money(r.totalAmount)}`;
+doc.text(line.substring(0, 112), 14, y);
+y += 6;
+if(y > 282){
+doc.addPage();
+doc.setFillColor(6,16,31);
+doc.rect(0,0,pageW,297,"F");
+doc.setTextColor(226,232,240);
 y = 18;
 }
 });
-doc.save("Sales_Report.pdf");
+
+doc.save("Sales_Analytics_Premium_Report.pdf");
+}
+
+function exportSalesPDF(){
+exportSalesPremiumPDF();
 }
 
 document.addEventListener("DOMContentLoaded", function(){
