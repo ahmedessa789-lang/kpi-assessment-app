@@ -2896,6 +2896,8 @@ return;
 
 const { jsPDF } = window.jspdf;
 const doc = new jsPDF("l", "mm", "a4");
+const pageW = 297;
+const pageH = 210;
 const analytics = getSalesAnalytics();
 const summary = salesReportSummaryCache || {};
 const pageW = doc.internal.pageSize.getWidth();
