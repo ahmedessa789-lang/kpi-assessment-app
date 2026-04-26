@@ -1780,51 +1780,91 @@ financeChart = new Chart(ctx,{
 });
 }
 
-async function ensureSalesDataForCEOReport(){
-    try {
-        if (typeof loadSalesReport === "function") { await loadSalesReport(); }
-        if (typeof updateSalesCharts === "function") { updateSalesCharts(); }
-        await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-        console.warn("Sales data could not be loaded for CEO report", error);
+
+async function buildCEOAutoSalesCharts(){
+    function sumMap(rows, keyFn, valueFn){
+        const out = {};
+        rows.forEach(r => {
+            const k = keyFn(r) || "-";
+            out[k] = (out[k] || 0) + Number(valueFn(r) || 0);
+        });
+        return out;
     }
-}
-
-function drawPdfMetricCard(doc, x, y, w, h, title, value){
-    doc.setFillColor(15, 23, 42);
-    doc.roundedRect(x, y, w, h, 4, 4, "F");
-    doc.setTextColor(148, 163, 184);
-    doc.setFontSize(9);
-    doc.text(title, x + 5, y + 8);
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13);
-    doc.text(String(value), x + 5, y + 18, { maxWidth: w - 10 });
-}
-
-function safeChartImageForPdf(canvasId, chartInstance){
-    try {
-        if (chartInstance && typeof chartInstance.update === "function") {
-            chartInstance.update("none");
-        }
-        const canvas = document.getElementById(canvasId);
-        if (!canvas || !canvas.width || !canvas.height) return null;
-        const dataUrl = canvas.toDataURL("image/png", 1.0);
-        if (!dataUrl || !dataUrl.startsWith("data:image/png") || dataUrl.length < 2000) return null;
-        return dataUrl;
-    } catch (error) {
-        console.warn("Chart image skipped:", canvasId, error);
-        return null;
+    function topEntry(obj){
+        return Object.entries(obj).sort((a,b)=>Number(b[1])-Number(a[1]))[0] || ["-",0];
     }
-}
-
-function addSafeChartToPdf(doc, imageData, x, y, w, h){
-    if (!imageData) return false;
-    try {
-        doc.addImage(imageData, "PNG", x, y, w, h);
-        return true;
-    } catch (error) {
-        console.warn("PDF chart skipped", error);
-        return false;
+    function tempChartImage(type, labels, values, title){
+        return new Promise(resolve => {
+            try{
+                const c = document.createElement("canvas");
+                c.width = type === "doughnut" ? 520 : 900;
+                c.height = 420;
+                c.style.position = "fixed";
+                c.style.left = "-10000px";
+                c.style.top = "-10000px";
+                document.body.appendChild(c);
+                const isPie = type === "doughnut";
+                const ch = new Chart(c, {
+                    type,
+                    data:{
+                        labels: labels.length ? labels : ["No Data"],
+                        datasets:[{
+                            label:title,
+                            data: values.length ? values : [0],
+                            backgroundColor: isPie ? ["rgba(34,211,238,.75)","rgba(99,102,241,.75)","rgba(34,197,94,.75)","rgba(250,204,21,.75)","rgba(244,114,182,.75)"] : "rgba(34,211,238,.65)",
+                            borderColor: isPie ? "rgba(15,23,42,1)" : "rgba(34,211,238,1)",
+                            borderWidth: isPie ? 4 : 2,
+                            fill: type === "line",
+                            tension: .35
+                        }]
+                    },
+                    options:{
+                        responsive:false,
+                        animation:false,
+                        plugins:{legend:{display:isPie,position:"bottom",labels:{color:"#e2e8f0"}}},
+                        scales: isPie ? {} : {
+                            x:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.18)"}},
+                            y:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.18)"}}
+                        }
+                    }
+                });
+                setTimeout(()=>{
+                    let img = null;
+                    try{ img = c.toDataURL("image/png", 1.0); }catch(e){ img = null; }
+                    ch.destroy();
+                    c.remove();
+                    resolve(img);
+                }, 120);
+            }catch(e){
+                console.error("CEO sales temp chart error", e);
+                resolve(null);
+            }
+        });
+    }
+    try{
+        const response = await apiFetch("/sales/report");
+        const result = await response.json();
+        const rows = result.sales || [];
+        const summary = result.summary || {};
+        const byRep = sumMap(rows, r=>r.salesFullName || r.salesUsername, r=>r.totalAmount);
+        const byProduct = sumMap(rows, r=>r.productName, r=>r.quantity);
+        const byCustomer = sumMap(rows, r=>r.customerName, r=>r.totalAmount);
+        const byMonth = sumMap(rows, r=>(r.saleDate || "").slice(0,7), r=>r.totalAmount);
+        const repLabels = Object.keys(byRep).slice(0,8);
+        const productLabels = Object.keys(byProduct).slice(0,8);
+        const monthLabels = Object.keys(byMonth).sort();
+        return {
+            rows, summary,
+            topRep: topEntry(byRep),
+            topCustomer: topEntry(byCustomer),
+            topProduct: topEntry(sumMap(rows, r=>r.productName, r=>r.totalAmount)),
+            repImg: await tempChartImage("bar", repLabels, repLabels.map(x=>byRep[x]), "Sales Amount"),
+            trendImg: await tempChartImage("line", monthLabels, monthLabels.map(x=>byMonth[x]), "Monthly Sales"),
+            productImg: await tempChartImage("doughnut", productLabels, productLabels.map(x=>byProduct[x]), "Quantity")
+        };
+    }catch(e){
+        console.error("CEO auto sales data error", e);
+        return {rows:[],summary:{},topRep:["-",0],topCustomer:["-",0],topProduct:["-",0],repImg:null,trendImg:null,productImg:null};
     }
 }
 
@@ -1857,8 +1897,6 @@ try {
     const priorityMetric = document.getElementById("priorityMetric")?.innerText || "-";
 
     const reportDate = new Date().toLocaleString();
-
-    await ensureSalesDataForCEOReport();
 
     function drawPageBackground(){
         doc.setFillColor(7, 17, 32);
@@ -1969,6 +2007,67 @@ try {
         y += 20;
     });
 
+
+    // PAGE 3 - SALES ULTIMATE AUTO CHARTS
+    const ceoSales = await buildCEOAutoSalesCharts();
+    doc.addPage();
+    drawPageBackground();
+    sectionTitle("Sales Analytics - Ultimate Auto Charts", 20);
+    doc.setTextColor(230, 240, 255);
+    doc.setFontSize(10);
+    doc.text("This page is generated automatically from the Sales Module without opening the Sales screen.", 20, 31);
+
+    const salesCards = [
+        ["Total Sales", money(ceoSales.summary.totalAmount || 0)],
+        ["Transactions", String(ceoSales.summary.transactions || ceoSales.rows.length || 0)],
+        ["Total Qty", money(ceoSales.summary.totalQuantity || 0)],
+        ["Average Sale", money(ceoSales.summary.averageSale || 0)]
+    ];
+    let salesCardX = 15;
+    salesCards.forEach(([label,value]) => {
+        doc.setFillColor(15, 23, 42);
+        doc.roundedRect(salesCardX, 40, 42, 24, 4, 4, "F");
+        doc.setTextColor(148, 163, 184);
+        doc.setFontSize(8);
+        doc.text(label, salesCardX + 4, 49);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13);
+        doc.text(String(value).substring(0, 14), salesCardX + 4, 59);
+        salesCardX += 46;
+    });
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(12, 73, 186, 70, 5, 5, "F");
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(13);
+    doc.text("Sales Amount by Sales Rep", 18, 84);
+    if(ceoSales.repImg){ doc.addImage(ceoSales.repImg, "PNG", 18, 90, 174, 45); }
+    else { doc.setTextColor(230, 240, 255); doc.text("No sales data available yet.", 22, 106); }
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(12, 151, 90, 76, 5, 5, "F");
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(13);
+    doc.text("Monthly Sales Trend", 18, 163);
+    if(ceoSales.trendImg){ doc.addImage(ceoSales.trendImg, "PNG", 18, 170, 78, 42); }
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(108, 151, 90, 76, 5, 5, "F");
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(13);
+    doc.text("Product Mix", 114, 163);
+    if(ceoSales.productImg){ doc.addImage(ceoSales.productImg, "PNG", 123, 168, 58, 48); }
+
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(12, 235, 186, 38, 5, 5, "F");
+    doc.setTextColor(34, 211, 238);
+    doc.setFontSize(13);
+    doc.text("Executive Sales Insights", 18, 247);
+    doc.setTextColor(230, 240, 255);
+    doc.setFontSize(10);
+    doc.text(`Best Sales Rep: ${ceoSales.topRep[0]} - ${money(ceoSales.topRep[1])}`, 18, 258);
+    doc.text(`Top Customer: ${ceoSales.topCustomer[0]} - ${money(ceoSales.topCustomer[1])}`, 18, 266);
+
     // PAGE 3 - FINANCE CHART
     const financeCanvas = document.getElementById("financeChart");
     if (financeCanvas) {
@@ -1976,14 +2075,8 @@ try {
         drawPageBackground();
         sectionTitle("Finance Chart", 22);
 
-        const chartImage = safeChartImageForPdf("financeChart", typeof financeChart !== "undefined" ? financeChart : null);
-        if (chartImage) {
-            addSafeChartToPdf(doc, chartImage, 15, 35, 180, 95);
-        } else {
-            doc.setTextColor(230, 240, 255);
-            doc.setFontSize(11);
-            doc.text("Finance chart is not available yet. Please run Financial Statements first.", 20, 60, { maxWidth: 165 });
-        }
+        const chartImage = financeCanvas.toDataURL("image/png", 1.0);
+        doc.addImage(chartImage, "PNG", 15, 35, 180, 95);
 
         sectionTitle("Finance Commentary", 150);
         doc.setTextColor(230, 240, 255);
@@ -1993,92 +2086,8 @@ try {
         doc.text("- Use this page in management meetings for fast financial review.", 20, 180);
     }
 
-    // PAGE 4 - SALES ANALYTICS FROM SALES MODULE
-    const salesRepCanvas = document.getElementById("salesRepChart");
-    const salesProductCanvas = document.getElementById("salesProductChart");
-    const salesTrendCanvas = document.getElementById("salesTrendChart");
-    const salesSummary = salesReportSummaryCache || {};
-    const salesAnalytics = (typeof getSalesAnalytics === "function") ? getSalesAnalytics() : null;
-
-    if (salesRepCanvas || salesProductCanvas || salesTrendCanvas) {
-        doc.addPage();
-        drawPageBackground();
-        sectionTitle("Sales Analytics Summary", 22);
-        doc.setTextColor(230, 240, 255);
-        doc.setFontSize(10);
-        doc.text("This page is automatically generated from the Sales Module and included in the CEO Board Report.", 20, 34, { maxWidth: 170 });
-
-        drawPdfMetricCard(doc, 20, 45, 40, 24, "Total Sales", money(salesSummary.totalAmount || 0));
-        drawPdfMetricCard(doc, 64, 45, 40, 24, "Transactions", salesSummary.transactions || 0);
-        drawPdfMetricCard(doc, 108, 45, 40, 24, "Total Qty", money(salesSummary.totalQuantity || 0));
-        drawPdfMetricCard(doc, 152, 45, 38, 24, "Top Product", salesSummary.topProduct || "-");
-
-        if (salesRepCanvas) {
-            const repImg = safeChartImageForPdf("salesRepChart", typeof salesRepChartInstance !== "undefined" ? salesRepChartInstance : null);
-            doc.setFillColor(15, 23, 42);
-            doc.roundedRect(15, 78, 180, 72, 4, 4, "F");
-            doc.setTextColor(34, 211, 238);
-            doc.setFontSize(13);
-            doc.text("Sales Amount by Sales Rep", 22, 90);
-            if (repImg) {
-                addSafeChartToPdf(doc, repImg, 20, 96, 170, 48);
-            } else {
-                doc.setTextColor(230, 240, 255);
-                doc.setFontSize(10);
-                doc.text("Sales by rep chart is not available yet.", 22, 116);
-            }
-        }
-
-        if (salesTrendCanvas) {
-            const trendImg = safeChartImageForPdf("salesTrendChart", typeof salesTrendChartInstance !== "undefined" ? salesTrendChartInstance : null);
-            doc.setFillColor(15, 23, 42);
-            doc.roundedRect(15, 158, 86, 62, 4, 4, "F");
-            doc.setTextColor(34, 211, 238);
-            doc.setFontSize(12);
-            doc.text("Monthly Sales Trend", 21, 170);
-            if (trendImg) {
-                addSafeChartToPdf(doc, trendImg, 20, 176, 76, 36);
-            } else {
-                doc.setTextColor(230, 240, 255);
-                doc.setFontSize(9);
-                doc.text("Trend chart is not available yet.", 20, 194);
-            }
-        }
-
-        if (salesProductCanvas) {
-            const productImg = safeChartImageForPdf("salesProductChart", typeof salesProductChartInstance !== "undefined" ? salesProductChartInstance : null);
-            doc.setFillColor(15, 23, 42);
-            doc.roundedRect(109, 158, 86, 62, 4, 4, "F");
-            doc.setTextColor(34, 211, 238);
-            doc.setFontSize(12);
-            doc.text("Product Mix", 115, 170);
-            if (productImg) {
-                addSafeChartToPdf(doc, productImg, 125, 174, 50, 42);
-            } else {
-                doc.setTextColor(230, 240, 255);
-                doc.setFontSize(9);
-                doc.text("Product chart is not available yet.", 116, 194);
-            }
-        }
-
-        doc.setFillColor(15, 23, 42);
-        doc.roundedRect(15, 228, 180, 44, 4, 4, "F");
-        doc.setTextColor(34, 211, 238);
-        doc.setFontSize(13);
-        doc.text("Sales Executive Insights", 22, 240);
-        doc.setTextColor(230, 240, 255);
-        doc.setFontSize(10);
-        const bestRep = salesAnalytics ? `${salesAnalytics.topRep[0]} - ${money(salesAnalytics.topRep[1])}` : "-";
-        const topCustomer = salesAnalytics ? `${salesAnalytics.topCustomer[0]} - ${money(salesAnalytics.topCustomer[1])}` : "-";
-        const topProduct = salesAnalytics ? `${salesAnalytics.topProductAmount[0]} - ${money(salesAnalytics.topProductAmount[1])}` : "-";
-        doc.text("Best Sales Rep: " + bestRep, 22, 252, { maxWidth: 160 });
-        doc.text("Top Customer: " + topCustomer, 22, 260, { maxWidth: 160 });
-        doc.text("Top Product by Amount: " + topProduct, 22, 268, { maxWidth: 160 });
-    }
-
-    // PAGE 5 - ANALYTICS
+    // PAGE 4 - ANALYTICS
     doc.addPage();
-
     drawPageBackground();
     sectionTitle("Analytics & Recommendations", 22);
 
@@ -2114,14 +2123,8 @@ try {
         doc.addPage();
         drawPageBackground();
         sectionTitle("KPI Performance Chart", 22);
-        const mainChartImage = safeChartImageForPdf("chart1", typeof chart !== "undefined" ? chart : null);
-        if (mainChartImage) {
-            addSafeChartToPdf(doc, mainChartImage, 15, 35, 180, 100);
-        } else {
-            doc.setTextColor(230, 240, 255);
-            doc.setFontSize(11);
-            doc.text("KPI chart is not available yet. Please run AI Analysis first.", 20, 60, { maxWidth: 165 });
-        }
+        const mainChartImage = mainChartCanvas.toDataURL("image/png", 1.0);
+        doc.addImage(mainChartImage, "PNG", 15, 35, 180, 100);
     }
 
     doc.save("Reap Service_Full_Board_Report.pdf");
