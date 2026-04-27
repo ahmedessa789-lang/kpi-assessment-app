@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reap Service KPI Dashboard</title>
+<title>KPI Assessment App MVP</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -797,7 +797,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div class="login-closed-title"><span></span>LOGIN</div>
 <div class="login-expanded">
 <div class="login-mark">RS</div>
-<h2>Reap Service Login</h2>
+<h2>KPI Assessment Login</h2>
 <p class="login-subtitle">Secure Business Intelligence Access</p>
 
 <input type="text" id="email" placeholder="Username" autocomplete="username">
@@ -806,7 +806,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <button type="button" onclick="login()">Login Securely</button>
 
 <p id="msg"></p>
-<div class="login-footer">Protected KPI Dashboard</div>
+<div class="login-footer">Protected Executive KPI System</div>
 </div>
 </div>
 </div>
@@ -817,24 +817,24 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 
 </div>
 <div class="about-eyebrow">About App</div>
-<h1>Reap Service KPI Dashboard</h1>
-<p>This application helps management review business performance through KPI analysis, financial statement review, automated Excel import, visual charts, and executive reporting in one place.</p>
-<p>The dashboard is designed so each module supports a different business need: CEO performance review, finance analysis, AI recommendations, and consolidated reporting.</p>
+<h1>KPI Assessment App – MVP Edition</h1>
+<p>A clear MVP for management: assess company performance, record live sales activity, review department KPIs, and export executive reports for decision makers.</p>
+<p>The application is simplified around five core actions: Dashboard, KPI Assessment, Sales Tracking, Finance Review, and Executive Reports.</p>
 <div class="about-grid">
 <div class="about-card">
-<h4>CEO Module</h4>
+<h4>Dashboard</h4>
 <p>Track commercial and operational KPIs, import executive Excel files, run AI-based analysis, and monitor overall business health from one executive screen.</p>
 </div>
 <div class="about-card">
-<h4>Finance Module</h4>
+<h4>Finance Review</h4>
 <p>Import Excel files, calculate financial statements, review mapping, and analyze the company’s financial position clearly.</p>
 </div>
 <div class="about-card">
-<h4>Analytics Module</h4>
+<h4>Sales & KPI Insights</h4>
 <p>View KPI charts, recommendations, strongest areas, weakest areas, and trend signals to support management decisions.</p>
 </div>
 <div class="about-card">
-<h4>Reports Module</h4>
+<h4>CEO Reports</h4>
 <p>Prepare structured reports with metrics, summaries, tables, and later full charts and executive outputs for presentations and review.</p>
 </div>
 </div>
@@ -850,15 +850,15 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div class="container">
 
 <aside class="sidebar">
-<div class="brand"><span>Reap Service</span></div>
+<div class="brand"><span>KPI MVP</span></div>
 <ul>
-<li class="side-link active-side" onclick="showView('executive')">CEO Dashboard</li>
-<li class="side-link" onclick="showView('analytics')">AI Analysis</li>
-<li class="side-link" onclick="showView('finance')">Finance</li>
-<li class="side-link" onclick="showView('sales')">Sales</li>
-<li class="side-link" onclick="showView('table')">Reports Table</li>
-<li class="side-link" id="usersSideLink" onclick="showView('users')">Users Management</li>
-<li class="side-link" id="businessSideLink" onclick="showView('business')">Business Control</li>
+<li class="side-link active-side" onclick="showView('executive')">Dashboard</li>
+<li class="side-link" onclick="showView('analytics')">KPI Insights</li>
+<li class="side-link" onclick="showView('finance')">Finance Review</li>
+<li class="side-link" onclick="showView('sales')">Sales Tracking</li>
+<li class="side-link" onclick="showView('table')">CEO Reports</li>
+<li class="side-link" id="usersSideLink" onclick="showView('users')">Users</li>
+<li class="side-link" id="businessSideLink" onclick="showView('business')">Business Setup</li>
 </ul>
 </aside>
 
@@ -866,24 +866,34 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 
 <div class="topbar">
 <div>
-<h1>Reap Service KPI Dashboard</h1>
-<p style="color:#93c5fd;margin-top:6px;">Business Intelligence System</p>
+<h1>KPI Assessment App</h1>
+<p style="color:#93c5fd;margin-top:6px;">Executive MVP – Dashboard, Sales, Finance & Reports</p>
 </div>
 
 <div id="topRight"></div>
 </div>
 
 <div class="view-switcher">
-<button class="view-btn active-view" data-view="executive" onclick="showView('executive')">Executive</button>
+<button class="view-btn active-view" data-view="executive" onclick="showView('executive')">Dashboard</button>
 <button class="view-btn" data-view="finance" onclick="showView('finance')">Finance</button>
 <button class="view-btn" data-view="sales" onclick="showView('sales')">Sales</button>
-<button class="view-btn" data-view="analytics" onclick="showView('analytics')">Analytics</button>
-<button class="view-btn" data-view="table" onclick="showView('table')">Table</button>
+<button class="view-btn" data-view="analytics" onclick="showView('analytics')">Insights</button>
+<button class="view-btn" data-view="table" onclick="showView('table')">Reports</button>
 <button class="view-btn" id="usersViewBtn" data-view="users" onclick="showView('users')">Users</button>
-<button class="view-btn" id="businessViewBtn" data-view="business" onclick="showView('business')">Business</button>
+<button class="view-btn" id="businessViewBtn" data-view="business" onclick="showView('business')">Setup</button>
 </div>
 
 <div id="executiveView" class="dashboard-view">
+<div class="section" id="mvpIntroBox">
+<h2>KPI Assessment App MVP</h2>
+<p style="color:#93c5fd;line-height:1.8;margin-bottom:18px;">A simple workflow for management: enter KPI data, track sales performance, review finance status, and export an executive report for CEO meetings.</p>
+<div class="summary-grid">
+<div class="summary-box"><h4>1. Assess</h4><p style="font-size:15px;line-height:1.6;">Evaluate Sales, Finance, Operations and Inventory KPIs.</p></div>
+<div class="summary-box"><h4>2. Track</h4><p style="font-size:15px;line-height:1.6;">Sales reps record daily transactions from any device.</p></div>
+<div class="summary-box"><h4>3. Review</h4><p style="font-size:15px;line-height:1.6;">Managers see live performance, charts and insights.</p></div>
+<div class="summary-box"><h4>4. Report</h4><p style="font-size:15px;line-height:1.6;">Export CEO-ready PDF reports for presentation.</p></div>
+</div>
+</div>
 <div class="cards">
 <div class="card"><h3>Overall</h3><p id="overallScore">0</p></div>
 <div class="card"><h3>Sales</h3><p id="salesScore">0</p></div>
@@ -893,7 +903,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 </div>
 
 <div class="section">
-<h2>Input Data</h2>
+<h2>KPI Assessment Input</h2>
 
 <form id="kpiForm">
 <div class="form-grid">
@@ -931,7 +941,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 </div>
 
 <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-<button type="submit">Run AI Analysis</button>
+<button type="submit">Calculate KPI Score</button>
 <button type="button" onclick="exportPDF()">Export PDF</button>
 <input type="file" id="ceoExcelFile" accept=".xlsx,.xls,.csv" style="background:#061525;color:white;padding:10px;border-radius:10px;">
 <button type="button" onclick="importCEOExcel()">Import CEO File</button>
