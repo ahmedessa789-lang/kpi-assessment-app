@@ -739,24 +739,50 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 .user-action-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 
 
-.sales-summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px;}
-.sales-summary-card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,18,32,.96));padding:20px;border-radius:18px;border:1px solid rgba(148,163,184,.10);box-shadow:0 8px 20px rgba(0,0,0,.18);}
-.sales-summary-card h4{color:#94a3b8;font-size:13px;margin-bottom:10px;}
-.sales-summary-card p{font-size:24px;font-weight:800;color:#f8fafc;}
+.sales-summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:22px;}
+.sales-summary-card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(6,16,31,.98),rgba(15,23,42,.96));padding:22px;border-radius:22px;border:1px solid rgba(56,189,248,.18);box-shadow:0 18px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);}
+.sales-summary-card::before{content:"";position:absolute;inset:auto -20% -55% -20%;height:90px;background:radial-gradient(circle,rgba(34,211,238,.18),transparent 65%);}
+.sales-summary-card:nth-child(2){border-color:rgba(34,197,94,.22);} .sales-summary-card:nth-child(3){border-color:rgba(139,92,246,.26);} .sales-summary-card:nth-child(4){border-color:rgba(250,204,21,.26);} .sales-summary-card:nth-child(5){border-color:rgba(244,114,182,.26);}
+.sales-summary-card h4{position:relative;color:#bfdbfe;font-size:13px;margin-bottom:12px;}
+.sales-summary-card p{position:relative;font-size:25px;font-weight:900;color:#f8fafc;letter-spacing:.2px;}
 .sales-report-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
 .sales-report-tools input,.sales-report-tools select{min-width:180px;}
 .sales-manager-only{display:none;}
 @media(max-width:1000px){.sales-summary-grid{grid-template-columns:1fr;}}
 
-.sales-analytics-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-bottom:20px;}
-.sales-chart-card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,18,32,.96));padding:22px;border-radius:18px;border:1px solid rgba(148,163,184,.10);box-shadow:0 10px 24px rgba(0,0,0,.18);}
-.sales-chart-card h3{margin-bottom:14px;color:#f8fafc;}
-.sales-insight-list{display:grid;gap:12px;}
-.sales-insight-item{background:#0f172a;border:1px solid rgba(148,163,184,.10);border-radius:14px;padding:14px;}
-.sales-insight-item span{display:block;color:#94a3b8;font-size:12px;margin-bottom:6px;}
+.sales-premium-section{background:linear-gradient(180deg,rgba(2,6,23,.35),rgba(15,23,42,.76));border:1px solid rgba(56,189,248,.16);box-shadow:0 22px 45px rgba(0,0,0,.20);}
+.sales-premium-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.sales-premium-title h2{margin:0;color:#f8fafc;}
+.sales-premium-title span{display:inline-flex;align-items:center;gap:8px;color:#67e8f9;background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.18);border-radius:999px;padding:9px 14px;font-size:13px;font-weight:800;}
+.sales-analytics-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-bottom:20px;}
+.sales-chart-card{position:relative;overflow:hidden;background:radial-gradient(circle at 10% 0%,rgba(34,211,238,.12),transparent 32%),linear-gradient(180deg,rgba(15,23,42,.98),rgba(5,11,24,.98));padding:24px;border-radius:24px;border:1px solid rgba(56,189,248,.18);box-shadow:0 18px 40px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.05);min-height:455px;display:flex;flex-direction:column;}
+.sales-chart-card h3{margin:0 0 5px;color:#f8fafc;font-size:22px;}
+.sales-chart-card .chart-subtitle{color:#93c5fd;font-size:13px;margin-bottom:14px;}
+.sales-chart-wrap{position:relative;min-height:320px;flex:1;display:flex;align-items:center;justify-content:center;}
+.sales-chart-wrap canvas{width:100%!important;height:320px!important;max-height:none!important;}
+.product-performance-layout{display:grid;grid-template-columns:.95fr 1.05fr;gap:18px;align-items:center;flex:1;}
+.product-performance-layout .sales-chart-wrap canvas{height:300px!important;}
+.product-premium-list{display:grid;gap:10px;}
+.product-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border-bottom:1px solid rgba(148,163,184,.12);padding:10px 0;}
+.product-name{display:flex;align-items:center;gap:8px;color:#f8fafc;font-weight:800;min-width:0;}
+.product-dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 16px currentColor;flex-shrink:0;}
+.product-amount{color:#e2e8f0;font-weight:800;white-space:nowrap;}
+.product-share{color:#67e8f9;font-weight:900;white-space:nowrap;}
+.sales-micro-insights{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;}
+.sales-micro-box{background:rgba(15,23,42,.80);border:1px solid rgba(148,163,184,.12);border-radius:16px;padding:13px;}
+.sales-micro-box span{display:block;color:#94a3b8;font-size:12px;margin-bottom:6px;}
+.sales-micro-box strong{display:block;color:#f8fafc;font-size:15px;line-height:1.35;}
+.sales-insight-list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.sales-insight-item{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(30,41,59,.80));border:1px solid rgba(148,163,184,.14);border-radius:20px;padding:18px 18px 18px 76px;min-height:90px;}
+.sales-insight-item::before{content:attr(data-icon);position:absolute;left:18px;top:20px;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#06b6d4,#2563eb);box-shadow:0 0 22px rgba(34,211,238,.24);}
+.sales-insight-item.gold{border-color:rgba(250,204,21,.30);} .sales-insight-item.gold::before{background:linear-gradient(135deg,#f59e0b,#facc15);}
+.sales-insight-item.green{border-color:rgba(34,197,94,.28);} .sales-insight-item.green::before{background:linear-gradient(135deg,#16a34a,#22c55e);}
+.sales-insight-item.purple{border-color:rgba(139,92,246,.30);} .sales-insight-item.purple::before{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.sales-insight-item.pink{border-color:rgba(244,114,182,.30);} .sales-insight-item.pink::before{background:linear-gradient(135deg,#db2777,#fb7185);}
+.sales-insight-item span{display:block;color:#93c5fd;font-size:12px;margin-bottom:7px;}
 .sales-insight-item strong{display:block;color:#f8fafc;font-size:18px;line-height:1.45;}
 .sales-premium-report-btn{background:linear-gradient(90deg,#22c55e,#06b6d4,#6366f1);}
-@media(max-width:1000px){.sales-analytics-grid{grid-template-columns:1fr;}}
+@media(max-width:1000px){.sales-analytics-grid,.product-performance-layout,.sales-insight-list,.sales-micro-insights{grid-template-columns:1fr;}.sales-chart-card{min-height:auto}.sales-chart-wrap canvas{height:280px!important;}}
 
 </style>
 </head>
@@ -1070,30 +1096,56 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div class="sales-summary-card"><h4>Top Product</h4><p id="salesTopProduct" style="font-size:18px;">-</p></div>
 </div>
 
-<div class="section">
-<h2>Sales Analytics Premium</h2>
+<div class="section sales-premium-section">
+<div class="sales-premium-title">
+<div>
+<h2>Sales Analytics Premium Report 👑</h2>
+<p style="color:#93c5fd;margin-top:6px;">Executive Insights & Performance Overview</p>
+</div>
+<span>Live Sales Intelligence</span>
+</div>
+
 <div class="sales-analytics-grid">
 <div class="sales-chart-card">
-<h3>Sales Amount by Sales Rep</h3>
-<canvas id="salesRepChart" height="130" style="max-height:320px;"></canvas>
+<h3>Sales by Rep</h3>
+<div class="chart-subtitle">Total sales amount by each sales representative</div>
+<div class="sales-chart-wrap"><canvas id="salesRepChart"></canvas></div>
+<div class="sales-micro-insights">
+<div class="sales-micro-box"><span>Bottom Performer</span><strong id="salesBottomRep">-</strong></div>
+<div class="sales-micro-box"><span>Top Performer</span><strong id="salesBestRep">-</strong></div>
+<div class="sales-micro-box"><span>Performance Gap</span><strong id="salesPerformanceGap">-</strong></div>
 </div>
+</div>
+
 <div class="sales-chart-card">
 <h3>Product Performance</h3>
-<canvas id="salesProductChart" height="130" style="max-height:320px;"></canvas>
+<div class="chart-subtitle">Sales distribution and product contribution</div>
+<div class="product-performance-layout">
+<div class="sales-chart-wrap"><canvas id="salesProductChart"></canvas></div>
+<div class="product-premium-list" id="productPremiumList"></div>
+</div>
+<div class="sales-micro-insights">
+<div class="sales-micro-box"><span>Top Product</span><strong id="salesTopProductDetail">-</strong></div>
+<div class="sales-micro-box"><span>Total Products</span><strong id="salesTotalProducts">0</strong></div>
+<div class="sales-micro-box"><span>Diversity Index</span><strong id="salesDiversityIndex">-</strong></div>
 </div>
 </div>
+</div>
+
 <div class="sales-analytics-grid">
 <div class="sales-chart-card">
 <h3>Monthly Sales Trend</h3>
-<canvas id="salesTrendChart" height="120" style="max-height:300px;"></canvas>
+<div class="chart-subtitle">Sales movement by month</div>
+<div class="sales-chart-wrap"><canvas id="salesTrendChart"></canvas></div>
 </div>
 <div class="sales-chart-card">
 <h3>Executive Insights</h3>
+<div class="chart-subtitle">Quick decision-making notes for management</div>
 <div class="sales-insight-list">
-<div class="sales-insight-item"><span>Best Sales Rep</span><strong id="salesBestRep">-</strong></div>
-<div class="sales-insight-item"><span>Top Customer</span><strong id="salesTopCustomer">-</strong></div>
-<div class="sales-insight-item"><span>Top Product by Amount</span><strong id="salesTopProductAmount">-</strong></div>
-<div class="sales-insight-item"><span>Sales Recommendation</span><strong id="salesRecommendation">Add sales transactions to generate insights.</strong></div>
+<div class="sales-insight-item gold" data-icon="🏆"><span>Best Sales Rep</span><strong id="salesBestRepExecutive">-</strong></div>
+<div class="sales-insight-item green" data-icon="👥"><span>Top Customer</span><strong id="salesTopCustomer">-</strong></div>
+<div class="sales-insight-item purple" data-icon="📦"><span>Top Product by Amount</span><strong id="salesTopProductAmount">-</strong></div>
+<div class="sales-insight-item pink" data-icon="📈"><span>Sales Recommendation</span><strong id="salesRecommendation">Add sales transactions to generate insights.</strong></div>
 </div>
 </div>
 </div>
@@ -2915,31 +2967,52 @@ topProductAmount
 
 function updateSalesCharts(){
 const analytics = getSalesAnalytics();
+const totalSales = Object.values(analytics.byRep).reduce((a,b)=>a+Number(b||0),0);
+const productTotal = Object.values(analytics.byProductAmount).reduce((a,b)=>a+Number(b||0),0);
 
-const repLabels = Object.keys(analytics.byRep).slice(0, 8);
-const repValues = repLabels.map(label => analytics.byRep[label]);
-
-const productLabels = Object.keys(analytics.byProductQty).slice(0, 8);
-const productValues = productLabels.map(label => analytics.byProductQty[label]);
-
+const sortEntries = (obj) => Object.entries(obj).sort((a,b)=>Number(b[1])-Number(a[1]));
+const repEntries = sortEntries(analytics.byRep).slice(0, 10);
+const productEntries = sortEntries(analytics.byProductAmount).slice(0, 8);
 const monthLabels = Object.keys(analytics.byMonth).sort();
 const monthValues = monthLabels.map(label => analytics.byMonth[label]);
 
+const repLabels = repEntries.map(e=>e[0]);
+const repValues = repEntries.map(e=>e[1]);
+const productLabels = productEntries.map(e=>e[0]);
+const productValues = productEntries.map(e=>e[1]);
+
+const premiumColors = [
+"rgba(34,211,238,.92)","rgba(99,102,241,.90)","rgba(34,197,94,.88)","rgba(250,204,21,.88)",
+"rgba(244,114,182,.88)","rgba(129,140,248,.88)","rgba(251,146,60,.88)","rgba(16,185,129,.88)"
+];
+
+function makeGradient(ctx, color1, color2){
+const gradient = ctx.createLinearGradient(0,0,0,320);
+gradient.addColorStop(0,color1);
+gradient.addColorStop(1,color2);
+return gradient;
+}
+
 const chartOptions = {
 responsive:true,
-plugins:{legend:{labels:{color:"#e2e8f0"}}},
+maintainAspectRatio:false,
+plugins:{
+legend:{display:false},
+tooltip:{backgroundColor:"rgba(2,6,23,.95)",borderColor:"rgba(34,211,238,.35)",borderWidth:1,titleColor:"#f8fafc",bodyColor:"#e2e8f0",padding:12,callbacks:{label:(ctx)=>`${ctx.dataset.label || "Amount"}: ${money(ctx.parsed.y ?? ctx.parsed ?? 0)}`}}
+},
 scales:{
-x:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.10)"}},
-y:{ticks:{color:"#cbd5e1"},grid:{color:"rgba(148,163,184,.10)"}}
+x:{ticks:{color:"#cbd5e1",font:{size:12,weight:"600"}},grid:{color:"rgba(148,163,184,.08)"}},
+y:{beginAtZero:true,ticks:{color:"#cbd5e1",callback:(v)=>money(v)},grid:{color:"rgba(148,163,184,.10)"}}
 }
 };
 
 const repCanvas = document.getElementById("salesRepChart");
 if(repCanvas){
+const ctx = repCanvas.getContext("2d");
 if(salesRepChartInstance) salesRepChartInstance.destroy();
 salesRepChartInstance = new Chart(repCanvas, {
 type:"bar",
-data:{labels:repLabels.length ? repLabels : ["No Data"], datasets:[{label:"Sales Amount", data:repValues.length ? repValues : [0], backgroundColor:"rgba(34,211,238,.55)", borderColor:"rgba(34,211,238,1)", borderWidth:1}]},
+data:{labels:repLabels.length ? repLabels : ["No Data"], datasets:[{label:"Sales Amount", data:repValues.length ? repValues : [0], backgroundColor:makeGradient(ctx,"rgba(34,211,238,.95)","rgba(37,99,235,.85)"), borderColor:"rgba(34,211,238,1)", borderWidth:1.5, borderRadius:10, barThickness:"flex", maxBarThickness:80}]},
 options:chartOptions
 });
 }
@@ -2949,31 +3022,50 @@ if(productCanvas){
 if(salesProductChartInstance) salesProductChartInstance.destroy();
 salesProductChartInstance = new Chart(productCanvas, {
 type:"doughnut",
-data:{labels:productLabels.length ? productLabels : ["No Data"], datasets:[{label:"Quantity", data:productValues.length ? productValues : [1], backgroundColor:["rgba(34,211,238,.65)","rgba(99,102,241,.65)","rgba(34,197,94,.65)","rgba(250,204,21,.65)","rgba(244,114,182,.65)","rgba(129,140,248,.65)","rgba(251,146,60,.65)","rgba(16,185,129,.65)"], borderColor:"rgba(15,23,42,1)", borderWidth:2}]},
-options:{responsive:true,plugins:{legend:{position:"bottom",labels:{color:"#e2e8f0"}}}}
+data:{labels:productLabels.length ? productLabels : ["No Data"], datasets:[{label:"Sales Amount", data:productValues.length ? productValues : [1], backgroundColor:premiumColors, borderColor:"rgba(2,6,23,1)", borderWidth:4, hoverOffset:10, cutout:"62%"}]},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(2,6,23,.95)",borderColor:"rgba(34,211,238,.35)",borderWidth:1,titleColor:"#f8fafc",bodyColor:"#e2e8f0",padding:12,callbacks:{label:(ctx)=>{const value=Number(ctx.parsed||0);const share=productTotal?((value/productTotal)*100).toFixed(1):0;return `${ctx.label}: ${money(value)} (${share}%)`;}}}}}
 });
 }
 
 const trendCanvas = document.getElementById("salesTrendChart");
 if(trendCanvas){
+const ctx = trendCanvas.getContext("2d");
 if(salesTrendChartInstance) salesTrendChartInstance.destroy();
 salesTrendChartInstance = new Chart(trendCanvas, {
 type:"line",
-data:{labels:monthLabels.length ? monthLabels : ["No Data"], datasets:[{label:"Monthly Sales", data:monthValues.length ? monthValues : [0], borderColor:"rgba(34,211,238,1)", backgroundColor:"rgba(34,211,238,.14)", fill:true, tension:.35}]},
+data:{labels:monthLabels.length ? monthLabels : ["No Data"], datasets:[{label:"Monthly Sales", data:monthValues.length ? monthValues : [0], borderColor:"rgba(34,211,238,1)", backgroundColor:makeGradient(ctx,"rgba(34,211,238,.28)","rgba(37,99,235,.02)"), fill:true, tension:.42, pointRadius:5, pointHoverRadius:8, pointBackgroundColor:"#22d3ee", pointBorderColor:"#0f172a", pointBorderWidth:2}]},
 options:chartOptions
 });
 }
 
-document.getElementById("salesBestRep").innerText = `${analytics.topRep[0]} (${money(analytics.topRep[1])})`;
-document.getElementById("salesTopCustomer").innerText = `${analytics.topCustomer[0]} (${money(analytics.topCustomer[1])})`;
-document.getElementById("salesTopProductAmount").innerText = `${analytics.topProductAmount[0]} (${money(analytics.topProductAmount[1])})`;
+const bottomRep = repEntries.length ? repEntries[repEntries.length-1] : ["-",0];
+const gap = Math.max(0, Number(analytics.topRep[1] || 0) - Number(bottomRep[1] || 0));
+const diversity = productLabels.length >= 5 ? "High" : productLabels.length >= 3 ? "Medium" : productLabels.length ? "Low" : "-";
 
-const recommendation = salesRowsCache.length
-? `Focus on ${analytics.topProductAmount[0]} and review the sales pattern of ${analytics.topRep[0]} to repeat the same performance with the rest of the team.`
-: "Add sales transactions to generate insights.";
-document.getElementById("salesRecommendation").innerText = recommendation;
+const productList = document.getElementById("productPremiumList");
+if(productList){
+productList.innerHTML = productEntries.length ? productEntries.map(([name,amount],i)=>{
+const share = productTotal ? ((Number(amount)/productTotal)*100).toFixed(1) : "0.0";
+return `<div class="product-row"><div class="product-name"><span class="product-dot" style="color:${premiumColors[i % premiumColors.length]};background:${premiumColors[i % premiumColors.length]}"></span><span>${escapeHTML(name)}</span></div><div class="product-amount">${money(amount)}</div><div class="product-share">${share}%</div></div>`;
+}).join("") : `<div class="product-row"><div class="product-name">No product data</div><div class="product-amount">0</div><div class="product-share">0%</div></div>`;
 }
 
+const setText = (id, value) => { const el = document.getElementById(id); if(el) el.innerText = value; };
+setText("salesBestRep", `${analytics.topRep[0]} (${money(analytics.topRep[1])})`);
+setText("salesBestRepExecutive", `${analytics.topRep[0]} - ${money(analytics.topRep[1])}`);
+setText("salesBottomRep", `${bottomRep[0]} (${money(bottomRep[1])})`);
+setText("salesPerformanceGap", money(gap));
+setText("salesTopCustomer", `${analytics.topCustomer[0]} (${money(analytics.topCustomer[1])})`);
+setText("salesTopProductAmount", `${analytics.topProductAmount[0]} (${money(analytics.topProductAmount[1])})`);
+setText("salesTopProductDetail", `${analytics.topProductAmount[0]} - ${money(analytics.topProductAmount[1])}`);
+setText("salesTotalProducts", String(productLabels.length));
+setText("salesDiversityIndex", diversity);
+
+const recommendation = salesRowsCache.length
+? `Best current opportunity: focus on ${analytics.topProductAmount[0]} and repeat ${analytics.topRep[0]}'s sales pattern with the rest of the team. Performance gap: ${money(gap)}.`
+: "Add sales transactions to generate insights.";
+setText("salesRecommendation", recommendation);
+}
 function renderSalesReport(summary){
 salesReportSummaryCache = summary || {};
 document.getElementById("salesTotalAmount").innerText = money(summary.totalAmount || 0);
