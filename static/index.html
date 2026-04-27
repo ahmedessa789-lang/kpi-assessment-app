@@ -1260,7 +1260,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <option value="inactive">Inactive</option>
 </select>
 <input type="number" id="biz_trial_days_input" placeholder="Trial Days" value="14">
-<input type="number" id="biz_max_users_input" placeholder="Max Users" value="5">
+<input type="number" id="biz_max_users_input" placeholder="Max Users" value="50">
 <input type="text" id="biz_license_key_input" placeholder="License Key Optional">
 </div>
 <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -3166,7 +3166,7 @@ const c = document.getElementById("biz_company_input"); if(c) c.value = b.compan
 const pr = document.getElementById("biz_product_input"); if(pr) pr.value = b.productName || "Reap Service KPI Dashboard";
 const pl = document.getElementById("biz_plan_input"); if(pl) pl.value = b.plan || "Trial";
 const st = document.getElementById("biz_status_input"); if(st) st.value = b.licenseStatus || "trial";
-const mu = document.getElementById("biz_max_users_input"); if(mu) mu.value = b.maxUsers || 5;
+const mu = document.getElementById("biz_max_users_input"); if(mu) mu.value = b.maxUsers || 50;
 }catch(error){
 console.error(error);
 const msg = document.getElementById("businessMsg");
@@ -3182,7 +3182,7 @@ product_name: document.getElementById("biz_product_input")?.value.trim() || "Rea
 plan: document.getElementById("biz_plan_input")?.value || "Trial",
 license_status: document.getElementById("biz_status_input")?.value || "trial",
 trial_days: Number(document.getElementById("biz_trial_days_input")?.value || 14),
-max_users: Number(document.getElementById("biz_max_users_input")?.value || 5),
+max_users: Number(document.getElementById("biz_max_users_input")?.value || 50),
 license_key: document.getElementById("biz_license_key_input")?.value.trim() || null
 };
 try{

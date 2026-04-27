@@ -400,7 +400,7 @@ def init_db() -> None:
             plan TEXT NOT NULL,
             license_status TEXT NOT NULL,
             trial_expires_at TEXT NOT NULL,
-            max_users INTEGER NOT NULL DEFAULT 5,
+            max_users INTEGER NOT NULL DEFAULT 50,
             license_key_hash TEXT,
             updated_at TEXT NOT NULL
         )
@@ -422,10 +422,21 @@ def init_db() -> None:
                 "Trial",
                 "trial",
                 (datetime.now() + timedelta(days=int(os.getenv("DEFAULT_TRIAL_DAYS", "14")))).isoformat(),
-                int(os.getenv("DEFAULT_MAX_USERS", "5")),
+                int(os.getenv("DEFAULT_MAX_USERS", "50")),
                 None,
                 datetime.now().isoformat(),
             ),
+        )
+
+    # Auto-upgrade old trial/user limit from 5 to the configured default.
+    # This keeps existing databases from blocking new users after code update.
+    default_max_users = int(os.getenv("DEFAULT_MAX_USERS", "50"))
+    cursor.execute("SELECT max_users FROM business_settings WHERE id = 1")
+    current_business_limit = cursor.fetchone()
+    if current_business_limit and int(current_business_limit["max_users"]) < default_max_users:
+        cursor.execute(
+            "UPDATE business_settings SET max_users = ?, updated_at = ? WHERE id = 1",
+            (default_max_users, datetime.now().isoformat()),
         )
 
     conn.commit()
@@ -530,7 +541,7 @@ class BusinessLicenseInput(BaseModel):
     plan: str = "Trial"
     license_status: str = "trial"
     trial_days: int = 14
-    max_users: int = 5
+    max_users: int = 50
     license_key: Optional[str] = None
 
 
