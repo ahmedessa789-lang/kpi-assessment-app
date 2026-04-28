@@ -816,6 +816,10 @@ def get_status(score: float):
 def home():
     return FileResponse("static/index.html")
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/favicon.ico")
+
 @app.get("/landing")
 def landing():
     return FileResponse("static/landing.html")
