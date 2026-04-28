@@ -3456,39 +3456,146 @@ async function uploadSmartExcel(){
         document.getElementById("smartColumnsCount").innerText = result.columns_count ?? "-";
 
         const detectedDiv = document.getElementById("smartDetectedColumns");
-        detectedDiv.innerHTML = "";
+        if(detectedDiv){
+            detectedDiv.innerHTML = "";
+            const detected = result.detected_columns || {};
+            const detectedKeys = Object.keys(detected);
 
-        const detected = result.detected_columns || {};
-        const detectedKeys = Object.keys(detected);
-
-        if(!detectedKeys.length){
-            detectedDiv.innerHTML = `<span style="color:#facc15;">No columns detected clearly.</span>`;
-        }else{
-            detectedKeys.forEach(key => {
-                detectedDiv.innerHTML += `
-                    <span style="padding:8px 12px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);color:#67e8f9;font-weight:700;">
-                        ${key}: ${detected[key]}
-                    </span>
-                `;
-            });
+            if(!detectedKeys.length){
+                detectedDiv.innerHTML = `<span style="color:#facc15;">No columns detected clearly.</span>`;
+            }else{
+                detectedKeys.forEach(key => {
+                    detectedDiv.innerHTML += `
+                        <span style="padding:8px 12px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);color:#67e8f9;font-weight:700;">
+                            ${key}: ${detected[key]}
+                        </span>
+                    `;
+                });
+            }
         }
 
-        document.getElementById("smartAnalysisOutput").innerText =
-            JSON.stringify(result.analysis || {}, null, 2);
-
-        if(result.file_type === "Inventory" && result.analysis){
-            document.getElementById("inventoryScore").innerText = result.analysis.total_quantity ?? 0;
+        const output = document.getElementById("smartAnalysisOutput");
+        if(output){
+            output.innerText = JSON.stringify(result.analysis || {}, null, 2);
         }
 
-        if(result.file_type === "Sales" && result.analysis){
-            document.getElementById("salesScore").innerText = result.analysis.total_sales ?? 0;
-        }
+        applySmartExcelToDashboard(result);
 
     }catch(error){
         console.error(error);
         if(status) status.innerText = "Error";
         alert("Error while uploading Excel file.");
     }
+}
+
+function setTextIfExists(id, value){
+    const el = document.getElementById(id);
+    if(el) el.innerText = value;
+}
+
+function applySmartExcelToDashboard(result){
+    const fileType = result.file_type || "Unknown";
+    const analysis = result.analysis || {};
+    const rowsCount = Number(result.rows_count || 0);
+
+    if(fileType === "Inventory"){
+        const lowStock = Number(analysis.low_stock_items || 0);
+        const totalQty = Number(analysis.total_quantity || 0);
+        const avgQty = Number(analysis.average_quantity || 0);
+        const lowStockPercent = rowsCount ? (lowStock / rowsCount) * 100 : 0;
+
+        let inventoryScore = 90;
+        if(lowStockPercent >= 70){
+            inventoryScore = 40;
+        }else if(lowStockPercent >= 40){
+            inventoryScore = 60;
+        }else if(lowStockPercent >= 20){
+            inventoryScore = 75;
+        }
+
+        setTextIfExists("inventoryScore", inventoryScore);
+        setTextIfExists("tblInventory", inventoryScore);
+        setTextIfExists("priorityMetric", lowStock > 0 ? "Inventory Review" : "Stable Inventory");
+        setTextIfExists("weakestKpi", inventoryScore < 60 ? "Inventory" : "-");
+        setTextIfExists("trendSignal", inventoryScore < 60 ? "High Risk" : "Stable");
+        setTextIfExists("bestKpi", inventoryScore >= 75 ? "Inventory" : "-");
+
+        const recommendationsList = document.getElementById("recommendationsList");
+        if(recommendationsList){
+            recommendationsList.innerHTML = `
+                <li>Inventory file detected successfully.</li>
+                <li>Total quantity detected: ${totalQty}</li>
+                <li>Average quantity per item: ${avgQty}</li>
+                <li>Low stock items: ${lowStock} from ${rowsCount} rows.</li>
+                <li>${inventoryScore < 60 ? "Stock level needs urgent review and restocking plan." : "Inventory status is acceptable, keep monitoring low-stock items."}</li>
+            `;
+        }
+    }
+
+    if(fileType === "Sales"){
+        const totalSales = Number(analysis.total_sales || 0);
+        const averageSales = Number(analysis.average_sales || 0);
+        const maxSale = Number(analysis.max_sale || 0);
+
+        let salesScore = 40;
+        if(totalSales > 0 && averageSales > 0){
+            salesScore = 80;
+        }
+        if(maxSale > averageSales * 2 && averageSales > 0){
+            salesScore = 90;
+        }
+
+        setTextIfExists("salesScore", salesScore);
+        setTextIfExists("tblSales", salesScore);
+        setTextIfExists("priorityMetric", "Sales Review");
+        setTextIfExists("bestKpi", salesScore >= 80 ? "Sales" : "-");
+        setTextIfExists("trendSignal", totalSales > 0 ? "Positive" : "Needs Data");
+
+        const recommendationsList = document.getElementById("recommendationsList");
+        if(recommendationsList){
+            recommendationsList.innerHTML = `
+                <li>Sales file detected successfully.</li>
+                <li>Total sales: ${totalSales}</li>
+                <li>Average sales: ${averageSales}</li>
+                <li>Maximum sale: ${maxSale}</li>
+            `;
+        }
+    }
+
+    if(fileType === "Finance"){
+        const financeScore = 75;
+        setTextIfExists("financeScore", financeScore);
+        setTextIfExists("tblFinance", financeScore);
+        setTextIfExists("priorityMetric", "Finance Mapping");
+        setTextIfExists("trendSignal", "Ready for Review");
+
+        const recommendationsList = document.getElementById("recommendationsList");
+        if(recommendationsList){
+            recommendationsList.innerHTML = `
+                <li>Finance file detected successfully.</li>
+                <li>Finance data is ready for deeper KPI mapping and financial ratios.</li>
+            `;
+        }
+    }
+
+    updateOverallFromCards();
+
+    if(typeof syncTable === "function"){
+        syncTable();
+    }
+}
+
+function updateOverallFromCards(){
+    const sales = parseFloat(document.getElementById("salesScore")?.innerText) || 0;
+    const finance = parseFloat(document.getElementById("financeScore")?.innerText) || 0;
+    const operations = parseFloat(document.getElementById("operationsScore")?.innerText) || 0;
+    const inventory = parseFloat(document.getElementById("inventoryScore")?.innerText) || 0;
+
+    const scores = [sales, finance, operations, inventory].filter(v => v > 0);
+    const overall = scores.length ? Math.round(scores.reduce((a,b) => a + b, 0) / scores.length) : 0;
+
+    setTextIfExists("overallScore", overall);
+    setTextIfExists("tblOverall", overall);
 }
 
 </script>
