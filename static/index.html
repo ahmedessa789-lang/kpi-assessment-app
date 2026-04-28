@@ -935,8 +935,15 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
 <button type="submit">Run AI Analysis</button>
 <button type="button" onclick="exportPDF()">Export PDF</button>
+
 <input type="file" id="ceoExcelFile" accept=".xlsx,.xls,.csv" style="background:#061525;color:white;padding:10px;border-radius:10px;">
 <button type="button" onclick="importCEOExcel()">Import CEO File</button>
+
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.18);padding:10px;border-radius:14px;">
+    <span style="font-weight:800;color:#67e8f9;">Smart Excel</span>
+    <input type="file" id="smartExcelFile" accept=".xlsx,.xls,.csv" style="background:#061525;color:white;padding:10px;border-radius:10px;">
+    <button type="button" onclick="uploadSmartExcel()">Analyze Excel</button>
+</div>
 </div>
 
 <div id="ceoDetectionBox" style="display:none; margin-top:20px; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96)); color:#f8fafc; border:1px solid rgba(148,163,184,.10); box-shadow:0 10px 24px rgba(0,0,0,.18);">
@@ -955,6 +962,31 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
         <div id="ceoDetectedColumns" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;"></div>
     </div>
 </div>
+
+<div id="smartExcelResultBox" style="display:none; margin-top:20px; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(10,18,32,.96)); color:#f8fafc; border:1px solid rgba(34,211,238,.20); box-shadow:0 10px 24px rgba(0,0,0,.18);">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <h3 style="margin:0;color:#67e8f9;">Smart Excel Analysis Result</h3>
+        <span id="smartExcelStatus" style="padding:8px 12px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);color:#67e8f9;font-weight:800;">Ready</span>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-box"><h4>Detected File Type</h4><p id="smartFileType">-</p></div>
+        <div class="summary-box"><h4>Rows</h4><p id="smartRowsCount">-</p></div>
+        <div class="summary-box"><h4>Columns</h4><p id="smartColumnsCount">-</p></div>
+        <div class="summary-box"><h4>Engine</h4><p style="font-size:18px;">Auto Excel Understanding</p></div>
+    </div>
+
+    <div style="margin-top:15px;">
+        <strong>Detected Columns</strong>
+        <div id="smartDetectedColumns" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <div style="margin-top:15px;">
+        <strong>Analysis</strong>
+        <pre id="smartAnalysisOutput" style="margin-top:10px;white-space:pre-wrap;background:#020617;padding:14px;border-radius:12px;color:#dbeafe;max-height:260px;overflow:auto;"></pre>
+    </div>
+</div>
+
 
 </form>
 </div>
@@ -3385,6 +3417,78 @@ if(result.success){ loadBusinessStatus(); }
 console.error(error);
 if(msg){ msg.style.color = "#fb7185"; msg.innerText = "Failed to save business settings."; }
 }
+}
+
+async function uploadSmartExcel(){
+    const fileInput = document.getElementById("smartExcelFile");
+    const resultBox = document.getElementById("smartExcelResultBox");
+    const status = document.getElementById("smartExcelStatus");
+
+    if(!fileInput || !fileInput.files.length){
+        alert("Please choose an Excel file first.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    if(resultBox) resultBox.style.display = "block";
+    if(status) status.innerText = "Analyzing...";
+
+    try{
+        const response = await apiFetch("/smart-excel/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if(!response.ok){
+            if(status) status.innerText = "Failed";
+            alert(result.detail || "Upload failed");
+            return;
+        }
+
+        if(status) status.innerText = "Analysis Complete";
+
+        document.getElementById("smartFileType").innerText = result.file_type || "-";
+        document.getElementById("smartRowsCount").innerText = result.rows_count ?? "-";
+        document.getElementById("smartColumnsCount").innerText = result.columns_count ?? "-";
+
+        const detectedDiv = document.getElementById("smartDetectedColumns");
+        detectedDiv.innerHTML = "";
+
+        const detected = result.detected_columns || {};
+        const detectedKeys = Object.keys(detected);
+
+        if(!detectedKeys.length){
+            detectedDiv.innerHTML = `<span style="color:#facc15;">No columns detected clearly.</span>`;
+        }else{
+            detectedKeys.forEach(key => {
+                detectedDiv.innerHTML += `
+                    <span style="padding:8px 12px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);color:#67e8f9;font-weight:700;">
+                        ${key}: ${detected[key]}
+                    </span>
+                `;
+            });
+        }
+
+        document.getElementById("smartAnalysisOutput").innerText =
+            JSON.stringify(result.analysis || {}, null, 2);
+
+        if(result.file_type === "Inventory" && result.analysis){
+            document.getElementById("inventoryScore").innerText = result.analysis.total_quantity ?? 0;
+        }
+
+        if(result.file_type === "Sales" && result.analysis){
+            document.getElementById("salesScore").innerText = result.analysis.total_sales ?? 0;
+        }
+
+    }catch(error){
+        console.error(error);
+        if(status) status.innerText = "Error";
+        alert("Error while uploading Excel file.");
+    }
 }
 
 </script>
