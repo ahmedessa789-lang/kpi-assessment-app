@@ -1,3 +1,5 @@
+from smart_excel_engine import analyze_excel_file
+from odoo_connector import get_sales_orders, calculate_sales_kpi
 import os
 import re
 import math
@@ -308,8 +310,12 @@ def seed_default_users() -> None:
     conn.close()
 
 
-app = FastAPI(title="KPI Assessment API", version="2.0.0", docs_url=None, redoc_url=None, openapi_url=None)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app = FastAPI(
+    title="KPI Assessment API",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 
 def init_db() -> None:
@@ -1620,3 +1626,34 @@ def login(data: LoginInput, request: Request):
             "fullName": user["full_name"],
         },
     }
+@app.get("/odoo/test")
+def test_odoo_connection():
+    orders = get_sales_orders(limit=5)
+    return {
+        "message": "Odoo connected successfully",
+        "orders_count": len(orders),
+        "sample_orders": orders
+    }
+
+
+@app.get("/odoo/sales-kpi")
+def odoo_sales_kpi(target: float = 100000):
+    return calculate_sales_kpi(target)
+from fastapi import UploadFile, File
+import shutil
+import os
+
+
+@app.post("/smart-excel/upload")
+async def smart_excel_upload(file: UploadFile = File(...)):
+    upload_folder = "uploads"
+    os.makedirs(upload_folder, exist_ok=True)
+
+    file_path = os.path.join(upload_folder, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    result = analyze_excel_file(file_path)
+
+    return result
