@@ -1060,7 +1060,7 @@ padding:12px;border:none;border-radius:10px;font-size:14px;background:#0b1220;co
 <button type="button" onclick="importServiceExcelClient()">Import Service Excel</button>
 <button type="button" onclick="exportServiceExcel()">Export Service Excel</button>
 </div>
-<p class="kpi-helper">Expected Excel columns: Ticket ID, Customer, Device Type, Request Date, Close Date, Status, Service Cost, Invoice Value, Technician, SLA Hours.</p>
+<p class="kpi-helper">Expected Excel columns are flexible now. The system auto-detects headers even if the template has a title row, and accepts names like Revenue / Sales / Amount, Cost / Service Cost, Target / Sales Target.</p>
 </div>
 </div>
 
@@ -3719,34 +3719,140 @@ function updateOverallFromCards(){
 }
 
 
-/* Business KPI Calculator Add-on */
+/* Business KPI Calculator Add-on V3 - Fixed exact calculations and Excel row detection */
 let serviceRowsCache = [];
-let businessKpiState = {
-  service: {},
-  sales: {},
-  finance: {}
-};
+let businessKpiState = { service: {}, sales: {}, finance: {} };
 
 function kpiNum(value){
   if(value === null || value === undefined) return 0;
-  const cleaned = String(value).replace(/,/g, "").replace(/EGP|\$|%/gi, "").trim();
-  const n = Number(cleaned);
+  if(value instanceof Date) return 0;
+  let text = String(value).trim();
+  if(text === "") return 0;
+  if(text.startsWith("=")) return 0; // ignore formulas when SheetJS returns formula text
+  text = text.replace(/,/g, "").replace(/EGP|جنيه|\$|%/gi, "").trim();
+  const n = Number(text);
   return Number.isFinite(n) ? n : 0;
+}
+function hasRealValue(value){
+  if(value === null || value === undefined) return false;
+  if(value instanceof Date) return true;
+  const text = String(value).trim();
+  if(!text) return false;
+  if(text.startsWith("=")) return false;
+  return true;
 }
 function kpiInputNum(id){ return kpiNum(document.getElementById(id)?.value); }
 function kpiSetText(id, value){ const el = document.getElementById(id); if(el) el.innerText = value; }
 function kpiMoney(value){ return Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:2}); }
 function kpiPercent(value){ return Number(value || 0).toFixed(2) + "%"; }
-function firstExisting(row, keys){
-  const normalized = {};
-  Object.keys(row || {}).forEach(k => normalized[String(k).toLowerCase().replace(/[^a-z0-9]/g, "")] = row[k]);
-  for(const key of keys){
-    const nk = String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
-    if(normalized[nk] !== undefined) return normalized[nk];
+function normalizeKpiKey(value){
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+function compactKpiKey(value){ return normalizeKpiKey(value).replace(/\s+/g, ""); }
+
+const KPI_ALIASES = {
+  ticketId: ["Ticket ID","Ticket","ID","Request ID","Service Request","SR No","SR Number","رقم الطلب","رقم التذكرة"],
+  customer: ["Customer","Hospital","Client","Account","Customer Name","Hospital Name","اسم العميل","المستشفى"],
+  status: ["Status","Ticket Status","Request Status","Case Status","الحالة"],
+  serviceCost: ["Service Cost","Maintenance Cost","Visit Cost","Spare Parts Cost","Total Cost","Cost","التكلفة","تكلفة الخدمة"],
+  invoiceValue: ["Invoice Value","Service Revenue","Revenue","Invoice Amount","Amount","Total Amount","Income","قيمة الفاتورة","الايراد","الإيراد"],
+  technician: ["Technician","Engineer","Assigned To","Staff","الفني","المهندس"],
+  requestDate: ["Request Date","Open Date","Start Date","Created Date","Date","تاريخ الطلب"],
+  closeDate: ["Close Date","Closed Date","End Date","Resolved Date","تاريخ الاغلاق"],
+  target: ["Target","Sales Target","Monthly Target","Target Sales","Budget","التارجت","المستهدف"],
+  actualSales: ["Actual Sales","Actual Revenue","Sales Amount","Net Sales","Total Sales","Sales","Revenue","Amount","المبيعات الفعلية","المبيعات"],
+  numberOfDeals: ["Number of Deals","Deals","Orders","Transactions","No. of Deals","Deal Count","عدد الصفقات","عدد الطلبات"],
+  leads: ["Leads","Lead Count","Prospects","Inquiries","عدد العملاء المحتملين"],
+  wonDeals: ["Won Deals","Won","Closed Won","Converted Customers","Conversions","عدد الصفقات الناجحة"],
+  lostDeals: ["Lost Deals","Lost","Closed Lost","عدد الصفقات الخاسرة"],
+  revenue: ["Revenue","Total Revenue","Sales Revenue","Income","Turnover","الإيرادات","الايراد"],
+  cogs: ["Cost of Goods Sold","COGS","Cost of Sales","Direct Cost","تكلفة البضاعة","تكلفة المبيعات"],
+  salaries: ["Salaries","Salary","Payroll","Wages","مرتبات","المرتبات"],
+  rent: ["Rent","Rental","Office Rent","إيجار","الايجار"],
+  marketing: ["Marketing","Marketing Expense","Ads","Advertising","تسويق","اعلانات"],
+  otherExpenses: ["Other Expenses","Other Expense","Misc Expenses","Admin Expenses","Additional Expenses","مصروفات أخرى"],
+  operatingExpenses: ["Operating Expenses","OPEX","Operational Expenses","المصروفات التشغيلية"],
+  totalExpenses: ["Total Expenses","Total Expense","Expenses Total","اجمالي المصروفات","إجمالي المصروفات"]
+};
+
+const FORBIDDEN_MATCHES = {
+  invoiceValue: ["service profit", "gross profit", "net profit"],
+  serviceCost: ["cost of goods sold"],
+  revenue: ["actual sales", "target", "service profit", "gross profit", "net profit"],
+  cogs: ["service cost", "total cost"],
+  operatingExpenses: ["total expenses", "other expenses"],
+  otherExpenses: ["total expenses", "operating expenses"],
+  actualSales: ["target", "achievement", "gap"]
+};
+
+function buildNormalizedRow(row){
+  const exact = {};
+  const original = {};
+  Object.keys(row || {}).forEach(col => {
+    const norm = normalizeKpiKey(col);
+    const compact = compactKpiKey(col);
+    if(norm){ exact[norm] = row[col]; original[norm] = col; }
+    if(compact){ exact[compact] = row[col]; original[compact] = col; }
+  });
+  return {exact, original};
+}
+function forbidden(metric, columnName){
+  const norm = normalizeKpiKey(columnName);
+  return (FORBIDDEN_MATCHES[metric] || []).some(x => norm === x || norm.includes(x));
+}
+function firstExisting(row, metrics){
+  const metricList = Array.isArray(metrics) ? metrics : [metrics];
+  const {exact, original} = buildNormalizedRow(row);
+  for(const metric of metricList){
+    const aliases = (KPI_ALIASES[metric] || []).concat([metric]);
+    for(const alias of aliases){
+      const norm = normalizeKpiKey(alias);
+      const compact = compactKpiKey(alias);
+      for(const key of [norm, compact]){
+        if(key && exact[key] !== undefined && hasRealValue(exact[key]) && !forbidden(metric, original[key] || key)) return exact[key];
+      }
+    }
+  }
+  // Safe partial only for long aliases. Avoid generic "Cost" or "Sales" stealing unrelated columns.
+  for(const metric of metricList){
+    const aliases = (KPI_ALIASES[metric] || []).concat([metric])
+      .map(normalizeKpiKey)
+      .filter(a => a.length >= 8 && !["sales","cost","amount","revenue","expenses"].includes(a));
+    for(const alias of aliases){
+      const matchKey = Object.keys(exact).find(col => (col.includes(alias) || alias.includes(col)) && !forbidden(metric, original[col] || col));
+      if(matchKey && hasRealValue(exact[matchKey])) return exact[matchKey];
+    }
   }
   return undefined;
 }
-function readWorkbookRowsFromInput(fileInputId, callback){
+function rowHasAny(row, metrics){
+  return metrics.some(m => hasRealValue(firstExisting(row, m)));
+}
+
+function detectHeaderRow(aoa){
+  let bestIndex = 0;
+  let bestScore = -1;
+  const knownHeaders = Object.values(KPI_ALIASES).flat().map(normalizeKpiKey);
+  aoa.slice(0,15).forEach((row, idx) => {
+    const cells = (row || []).map(v => String(v ?? "").trim()).filter(Boolean);
+    let score = cells.length;
+    cells.forEach(cell => {
+      const n = normalizeKpiKey(cell);
+      if(!n) return;
+      if(n.startsWith("unnamed")) score -= 4;
+      if(knownHeaders.includes(n)) score += 12;
+      else if(knownHeaders.some(h => h.length >= 8 && (n.includes(h) || h.includes(n)))) score += 3;
+    });
+    if(score > bestScore){ bestScore = score; bestIndex = idx; }
+  });
+  return bestIndex;
+}
+function readWorkbookRowsFromInput(fileInputId, callback, preferredSheetName){
   const fileInput = document.getElementById(fileInputId);
   if(!fileInput || !fileInput.files.length){ alert("Please select Excel file first"); return; }
   const reader = new FileReader();
@@ -3754,10 +3860,17 @@ function readWorkbookRowsFromInput(fileInputId, callback){
     try{
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, {type:"array", cellDates:true});
-      const sheetName = wb.SheetNames[0];
+      let sheetName = wb.SheetNames[0];
+      if(preferredSheetName){
+        const target = normalizeKpiKey(preferredSheetName);
+        const found = wb.SheetNames.find(s => normalizeKpiKey(s).includes(target));
+        if(found) sheetName = found;
+      }
       const ws = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
-      callback(rows, sheetName);
+      const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:"", raw:false});
+      const headerRowIndex = detectHeaderRow(aoa);
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:"", range:headerRowIndex, raw:false});
+      callback(rows, sheetName, headerRowIndex + 1);
     }catch(err){
       console.error(err);
       alert("Excel reading failed. Please check file format.");
@@ -3783,7 +3896,6 @@ function applyServiceResults(result){
   kpiSetText("svcStatusResult", status);
   refreshExecutiveBusinessSummary();
 }
-
 function calculateServiceKPIsManual(){
   const totalTickets = kpiInputNum("svc_total_tickets");
   const closedTickets = kpiInputNum("svc_closed_tickets");
@@ -3797,28 +3909,29 @@ function calculateServiceKPIsManual(){
   const avgResolutionHours = kpiInputNum("svc_avg_resolution_hours");
   applyServiceResults({totalTickets, closedTickets, openTickets, serviceRevenue, serviceCost, serviceProfit, serviceMargin, closureRate, avgResolutionHours});
 }
-
 function importServiceExcelClient(){
-  readWorkbookRowsFromInput("serviceExcelFile", function(rows){
+  readWorkbookRowsFromInput("serviceExcelFile", function(rawRows, sheetName, headerRow){
+    const rows = rawRows.filter(row => rowHasAny(row, ["ticketId","customer","status","serviceCost","invoiceValue","requestDate"]));
     serviceRowsCache = rows;
     const totalTickets = rows.length;
     let closedTickets = 0, serviceRevenue = 0, serviceCost = 0, totalResolutionHours = 0, resolvedCount = 0;
     const body = document.getElementById("serviceRowsBody");
     if(body){ body.innerHTML = ""; }
     rows.forEach((row, idx) => {
-      const status = String(firstExisting(row,["Status"]) || "").toLowerCase();
-      if(status.includes("closed") || status.includes("done") || status.includes("resolved")) closedTickets++;
-      const cost = kpiNum(firstExisting(row,["Service Cost","Cost"]));
-      const invoice = kpiNum(firstExisting(row,["Invoice Value","Service Revenue","Revenue"]));
-      serviceCost += cost; serviceRevenue += invoice;
-      const req = firstExisting(row,["Request Date","Open Date","Start Date"]);
-      const close = firstExisting(row,["Close Date","Closed Date","End Date"]);
+      const status = String(firstExisting(row,"status") || "").toLowerCase();
+      if(status.includes("closed") || status.includes("done") || status.includes("resolved") || status.includes("مغلق")) closedTickets++;
+      const cost = kpiNum(firstExisting(row,"serviceCost"));
+      const invoice = kpiNum(firstExisting(row,"invoiceValue"));
+      serviceCost += cost;
+      serviceRevenue += invoice;
+      const req = firstExisting(row,"requestDate");
+      const close = firstExisting(row,"closeDate");
       if(req && close){
         const d1 = new Date(req); const d2 = new Date(close);
         if(!isNaN(d1) && !isNaN(d2) && d2 >= d1){ totalResolutionHours += (d2-d1)/36e5; resolvedCount++; }
       }
       if(body && idx < 20){
-        body.innerHTML += `<tr><td>${firstExisting(row,["Ticket ID","Ticket","ID"]) || "-"}</td><td>${firstExisting(row,["Customer","Hospital"]) || "-"}</td><td>${firstExisting(row,["Status"]) || "-"}</td><td>${kpiMoney(cost)}</td><td>${kpiMoney(invoice)}</td><td>${firstExisting(row,["Technician","Engineer"]) || "-"}</td></tr>`;
+        body.innerHTML += `<tr><td>${firstExisting(row,"ticketId") || "-"}</td><td>${firstExisting(row,"customer") || "-"}</td><td>${firstExisting(row,"status") || "-"}</td><td>${kpiMoney(cost)}</td><td>${kpiMoney(invoice)}</td><td>${firstExisting(row,"technician") || "-"}</td></tr>`;
       }
     });
     if(body && !rows.length) body.innerHTML = `<tr><td colspan="6">No service data imported.</td></tr>`;
@@ -3827,12 +3940,11 @@ function importServiceExcelClient(){
     const serviceMargin = serviceRevenue ? (serviceProfit/serviceRevenue)*100 : 0;
     const closureRate = totalTickets ? (closedTickets/totalTickets)*100 : 0;
     const avgResolutionHours = resolvedCount ? totalResolutionHours/resolvedCount : kpiInputNum("svc_avg_resolution_hours");
-    [ ["svc_total_tickets",totalTickets], ["svc_closed_tickets",closedTickets], ["svc_open_tickets",openTickets], ["svc_revenue",serviceRevenue], ["svc_cost",serviceCost], ["svc_avg_resolution_hours",avgResolutionHours] ].forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value = Number(v||0).toFixed(2); });
+    [["svc_total_tickets",totalTickets], ["svc_closed_tickets",closedTickets], ["svc_open_tickets",openTickets], ["svc_revenue",serviceRevenue], ["svc_cost",serviceCost], ["svc_avg_resolution_hours",avgResolutionHours]].forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value = Number(v||0).toFixed(2); });
     applyServiceResults({totalTickets,closedTickets,openTickets,serviceRevenue,serviceCost,serviceProfit,serviceMargin,closureRate,avgResolutionHours});
-    alert("Service Excel imported and calculated successfully.");
-  });
+    alert(`Service Excel calculated successfully. Sheet: ${sheetName}, Header row: ${headerRow}, Data rows: ${rows.length}`);
+  }, "Service");
 }
-
 function exportServiceExcel(){
   const rows = [["Metric","Value"],["Total Tickets",document.getElementById("svcTotalTicketsResult")?.innerText || 0],["Closed Tickets",document.getElementById("svcClosedTicketsResult")?.innerText || 0],["Open Tickets",document.getElementById("svcOpenTicketsResult")?.innerText || 0],["Service Revenue",document.getElementById("svcRevenueResult")?.innerText || 0],["Service Cost",document.getElementById("svcCostResult")?.innerText || 0],["Service Profit",document.getElementById("svcProfitResult")?.innerText || 0],["Service Margin",document.getElementById("svcMarginResult")?.innerText || "0%"]];
   const wb = XLSX.utils.book_new();
@@ -3854,37 +3966,37 @@ function applySalesManualResults(result){
   }
   refreshExecutiveBusinessSummary();
 }
-
 function calculateSalesKPIsManual(){
   const totalTarget = kpiInputNum("sales_target_manual");
   const actualSales = kpiInputNum("sales_actual_manual");
   const numberOfDeals = kpiInputNum("sales_deals_manual");
   const leads = kpiInputNum("sales_leads_manual");
   const wonDeals = kpiInputNum("sales_won_manual");
+  const lostDeals = kpiInputNum("sales_lost_manual");
   const achievement = totalTarget ? (actualSales/totalTarget)*100 : 0;
   const gap = totalTarget - actualSales;
   const conversionRate = leads ? (wonDeals/leads)*100 : 0;
   const averageDealValue = numberOfDeals ? actualSales/numberOfDeals : 0;
   let status = "Critical";
   if(achievement >= 100) status = "Excellent"; else if(achievement >= 80) status = "Good"; else if(achievement >= 60) status = "Needs Improvement";
-  applySalesManualResults({totalTarget,actualSales,numberOfDeals,leads,wonDeals,achievement,gap,conversionRate,averageDealValue,status});
+  applySalesManualResults({totalTarget,actualSales,numberOfDeals,leads,wonDeals,lostDeals,achievement,gap,conversionRate,averageDealValue,status});
 }
-
 function importSalesKpiExcelClient(){
-  readWorkbookRowsFromInput("salesKpiExcelFile", function(rows){
+  readWorkbookRowsFromInput("salesKpiExcelFile", function(rawRows, sheetName, headerRow){
+    const rows = rawRows.filter(row => rowHasAny(row, ["target","actualSales","numberOfDeals","leads","wonDeals","lostDeals"]));
     let totalTarget=0, actualSales=0, numberOfDeals=0, leads=0, wonDeals=0, lostDeals=0;
     rows.forEach(row=>{
-      totalTarget += kpiNum(firstExisting(row,["Target","Sales Target"]));
-      actualSales += kpiNum(firstExisting(row,["Actual Sales","Sales","Revenue"]));
-      numberOfDeals += kpiNum(firstExisting(row,["Number of Deals","Deals","Orders"]));
-      leads += kpiNum(firstExisting(row,["Leads","Lead Count"]));
-      wonDeals += kpiNum(firstExisting(row,["Won Deals","Won"]));
-      lostDeals += kpiNum(firstExisting(row,["Lost Deals","Lost"]));
+      totalTarget += kpiNum(firstExisting(row,"target"));
+      actualSales += kpiNum(firstExisting(row,"actualSales"));
+      numberOfDeals += kpiNum(firstExisting(row,"numberOfDeals"));
+      leads += kpiNum(firstExisting(row,"leads"));
+      wonDeals += kpiNum(firstExisting(row,"wonDeals"));
+      lostDeals += kpiNum(firstExisting(row,"lostDeals"));
     });
     [["sales_target_manual",totalTarget],["sales_actual_manual",actualSales],["sales_deals_manual",numberOfDeals],["sales_leads_manual",leads],["sales_won_manual",wonDeals],["sales_lost_manual",lostDeals]].forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=Number(v||0).toFixed(2); });
     calculateSalesKPIsManual();
-    alert("Sales KPI Excel imported and calculated successfully.");
-  });
+    alert(`Sales KPI Excel calculated successfully. Sheet: ${sheetName}, Header row: ${headerRow}, Data rows: ${rows.length}`);
+  }, "Sales");
 }
 
 const originalCalculateFinancials = typeof calculateFinancials === "function" ? calculateFinancials : null;
@@ -3903,6 +4015,63 @@ calculateFinancials = function(){
   refreshExecutiveBusinessSummary();
 };
 
+// Local P&L import override: exact P&L formula logic. It does not double count Total Expenses + Other Expenses.
+importExcel = function(){
+  readWorkbookRowsFromInput("excelFile", function(rawRows, sheetName, headerRow){
+    const rows = rawRows.filter(row => rowHasAny(row, ["revenue","cogs","salaries","rent","marketing","otherExpenses","operatingExpenses","totalExpenses"]));
+    let revenue=0, cogs=0, salaries=0, rent=0, marketing=0, otherExpenses=0, operatingOnly=0, totalExpensesColumn=0;
+    let hasComponentExpenses = false, hasOperatingOnly = false, hasTotalExpenses = false;
+    rows.forEach(row => {
+      const r = kpiNum(firstExisting(row,"revenue"));
+      const cg = kpiNum(firstExisting(row,"cogs"));
+      const sal = kpiNum(firstExisting(row,"salaries"));
+      const rn = kpiNum(firstExisting(row,"rent"));
+      const mk = kpiNum(firstExisting(row,"marketing"));
+      const oth = kpiNum(firstExisting(row,"otherExpenses"));
+      const op = kpiNum(firstExisting(row,"operatingExpenses"));
+      const tot = kpiNum(firstExisting(row,"totalExpenses"));
+      revenue += r; cogs += cg; salaries += sal; rent += rn; marketing += mk; otherExpenses += oth; operatingOnly += op; totalExpensesColumn += tot;
+      if(sal || rn || mk || oth) hasComponentExpenses = true;
+      if(op) hasOperatingOnly = true;
+      if(tot) hasTotalExpenses = true;
+    });
+    let operatingExpenses = 0;
+    let finalOtherExpenses = 0;
+    if(hasComponentExpenses){
+      operatingExpenses = salaries + rent + marketing;
+      finalOtherExpenses = otherExpenses;
+    }else if(hasOperatingOnly){
+      operatingExpenses = operatingOnly;
+      finalOtherExpenses = otherExpenses;
+    }else if(hasTotalExpenses){
+      operatingExpenses = totalExpensesColumn;
+      finalOtherExpenses = 0;
+    }
+    const values = { fs_revenue: revenue, fs_cogs: cogs, fs_operating_expenses: operatingExpenses, fs_other_expenses: finalOtherExpenses };
+    Object.entries(values).forEach(([id,value]) => { const el = document.getElementById(id); if(el) el.value = Number(value || 0).toFixed(2); });
+    const box = document.getElementById("financeDetectionBox"); if(box) box.style.display = "block";
+    const sheetUsed = document.getElementById("financeSheetUsed");
+    if(sheetUsed) sheetUsed.innerHTML = `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);font-weight:700;color:white;">Sheet: ${sheetName} | Header Row: ${headerRow} | Data Rows: ${rows.length}</span>`;
+    const cols = rows[0] ? Object.keys(rows[0]) : [];
+    const colsEl = document.getElementById("financeColumnsFound");
+    if(colsEl) colsEl.innerHTML = cols.map(col => `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:#0b1220;border:1px solid rgba(255,255,255,0.08);color:#e5e7eb;font-size:14px;">${col}</span>`).join("");
+    const grossProfit = revenue - cogs;
+    const totalExpenses = operatingExpenses + finalOtherExpenses;
+    const netProfit = grossProfit - totalExpenses;
+    const mapEl = document.getElementById("financeDetectedColumns");
+    if(mapEl) mapEl.innerHTML = `
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>Revenue</b><br><span style="color:#67e8f9;">${kpiMoney(revenue)}</span></div>
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>COGS</b><br><span style="color:#67e8f9;">${kpiMoney(cogs)}</span></div>
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>Operating Expenses</b><br><span style="color:#67e8f9;">${kpiMoney(operatingExpenses)}</span></div>
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>Other Expenses</b><br><span style="color:#67e8f9;">${kpiMoney(finalOtherExpenses)}</span></div>
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>Gross Profit</b><br><span style="color:#67e8f9;">${kpiMoney(grossProfit)}</span></div>
+      <div style="background:#0b1220;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:14px;"><b>Net Profit</b><br><span style="color:#67e8f9;">${kpiMoney(netProfit)}</span></div>`;
+    calculateFinancials();
+    if(typeof syncTable === "function") syncTable();
+    alert(`P&L Excel calculated successfully. Sheet: ${sheetName}, Header row: ${headerRow}, Data rows: ${rows.length}`);
+  }, "PL");
+};
+
 function refreshExecutiveBusinessSummary(){
   const serviceProfit = businessKpiState.service.serviceProfit ?? kpiNum(document.getElementById("svcProfitResult")?.innerText);
   const netProfit = businessKpiState.finance.netProfit ?? kpiNum(document.getElementById("netProfit")?.innerText);
@@ -3916,7 +4085,6 @@ function refreshExecutiveBusinessSummary(){
   else if(serviceProfit > 0 || netProfit > 0 || salesAchievement >= 60) status = "Medium - Improvement Required";
   kpiSetText("execBusinessStatus", status);
 }
-
 function exportBusinessPerformancePDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("p", "mm", "a4");
