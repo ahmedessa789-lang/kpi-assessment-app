@@ -4111,6 +4111,231 @@ function exportBusinessPerformancePDF(){
   doc.save("Business_Performance_Report.pdf");
 }
 
+/* Business KPI Calculator Add-on V4 - strict sheet + header + column index mapping */
+(function(){
+  function v4Norm(v){
+    return String(v ?? "")
+      .toLowerCase()
+      .replace(/&/g," and ")
+      .replace(/[^a-z0-9\u0600-\u06ff]+/g," ")
+      .trim()
+      .replace(/\s+/g," ");
+  }
+  function v4Compact(v){ return v4Norm(v).replace(/\s+/g,""); }
+  function v4Num(value){
+    if(value === null || value === undefined) return 0;
+    if(value instanceof Date) return 0;
+    let t = String(value).trim();
+    if(!t || t.startsWith("=")) return 0;
+    const neg = /^\(.*\)$/.test(t);
+    t = t.replace(/[(),]/g, m => m === "," ? "" : "")
+         .replace(/EGP|جنيه|usd|\$|%/gi, "")
+         .trim();
+    const n = Number(t);
+    if(!Number.isFinite(n)) return 0;
+    return neg ? -Math.abs(n) : n;
+  }
+  function v4Money(v){ return Number(v || 0).toLocaleString(undefined,{maximumFractionDigits:2}); }
+  function v4Percent(v){ return Number(v || 0).toFixed(2) + "%"; }
+  function v4Set(id, text){ const el = document.getElementById(id); if(el) el.innerText = text; }
+  function v4SetInput(id, val){ const el = document.getElementById(id); if(el) el.value = Number(val || 0).toFixed(2); }
+
+  const ALIASES = {
+    ticketId:["ticket id","ticket","id","request id","sr no","sr number","service request","رقم الطلب","رقم التذكرة"],
+    customer:["customer","customer name","hospital","hospital name","client","account","اسم العميل","المستشفى"],
+    status:["status","ticket status","request status","case status","الحالة"],
+    serviceCost:["service cost","maintenance cost","visit cost","spare parts cost","تكلفة الخدمة"],
+    invoiceValue:["invoice value","service revenue","invoice amount","service amount","revenue amount","قيمة الفاتورة","ايراد الخدمة","إيراد الخدمة"],
+    technician:["technician","engineer","assigned to","staff","الفني","المهندس"],
+    requestDate:["request date","open date","start date","created date","تاريخ الطلب"],
+    closeDate:["close date","closed date","end date","resolved date","تاريخ الاغلاق","تاريخ الإغلاق"],
+
+    target:["target","sales target","monthly target","target sales","budget","التارجت","المستهدف"],
+    actualSales:["actual sales","actual revenue","sales amount","net sales","total sales","المبيعات الفعلية"],
+    numberOfDeals:["number of deals","deals","orders","transactions","no of deals","deal count","عدد الصفقات","عدد الطلبات"],
+    leads:["leads","lead count","prospects","inquiries","عدد العملاء المحتملين"],
+    wonDeals:["won deals","won","closed won","converted customers","conversions","عدد الصفقات الناجحة"],
+    lostDeals:["lost deals","lost","closed lost","عدد الصفقات الخاسرة"],
+
+    revenue:["revenue","total revenue","sales revenue","income","turnover","الإيرادات","الايراد","الإيراد"],
+    cogs:["cost of goods sold","cogs","cost of sales","direct cost","تكلفة البضاعة","تكلفة المبيعات"],
+    salaries:["salaries","salary","payroll","wages","مرتبات","المرتبات"],
+    rent:["rent","rental","office rent","إيجار","الايجار","الإيجار"],
+    marketing:["marketing","marketing expense","ads","advertising","تسويق","اعلانات","إعلانات"],
+    otherExpenses:["other expenses","other expense","misc expenses","admin expenses","additional expenses","مصروفات أخرى","مصروفات اخري"],
+    operatingExpenses:["operating expenses","opex","operational expenses","المصروفات التشغيلية"],
+    totalExpenses:["total expenses","total expense","expenses total","اجمالي المصروفات","إجمالي المصروفات"]
+  };
+
+  const DISALLOW = {
+    invoiceValue:["service profit","gross profit","net profit","profit","margin"],
+    serviceCost:["cost of goods sold","cogs"],
+    revenue:["actual sales","target","service profit","gross profit","net profit","profit","margin"],
+    actualSales:["target","achievement","gap","conversion","performance status"],
+    cogs:["service cost","total cost"],
+    operatingExpenses:["total expenses","other expenses"],
+    otherExpenses:["total expenses","operating expenses"]
+  };
+
+  function colAllowed(metric, header){
+    const h = v4Norm(header);
+    return !(DISALLOW[metric] || []).some(x => h === x || h.includes(x));
+  }
+  function findCol(headers, metric, fallbackIndex){
+    const norms = headers.map(h => v4Norm(h));
+    const comps = headers.map(h => v4Compact(h));
+    const aliases = (ALIASES[metric] || []).map(v4Norm);
+    for(const a of aliases){
+      const c = a.replace(/\s+/g,"");
+      for(let i=0;i<headers.length;i++){
+        if(!colAllowed(metric, headers[i])) continue;
+        if(norms[i] === a || comps[i] === c) return i;
+      }
+    }
+    for(const a of aliases.filter(x => x.length >= 8)){
+      for(let i=0;i<headers.length;i++){
+        if(!colAllowed(metric, headers[i])) continue;
+        if(norms[i].includes(a) || a.includes(norms[i])) return i;
+      }
+    }
+    return Number.isInteger(fallbackIndex) && fallbackIndex < headers.length ? fallbackIndex : -1;
+  }
+  function findSheetName(wb, preferred){
+    const p = v4Norm(preferred);
+    return wb.SheetNames.find(s => v4Norm(s).includes(p)) || wb.SheetNames[0];
+  }
+  function headerScore(row, metrics){
+    const cells = (row || []).map(v4Norm).filter(Boolean);
+    let score = cells.length;
+    for(const cell of cells){
+      if(cell.startsWith("unnamed")) score -= 10;
+      for(const m of metrics){
+        for(const a of (ALIASES[m] || []).map(v4Norm)){
+          if(cell === a) score += 20;
+          else if(a.length >= 8 && (cell.includes(a) || a.includes(cell))) score += 5;
+        }
+      }
+      if(["service profit","gross profit","net profit","achievement","gap","conversion rate","performance status","sla status"].includes(cell)) score -= 5;
+    }
+    return score;
+  }
+  function readAoa(fileInputId, preferredSheet, metrics, done){
+    const input = document.getElementById(fileInputId);
+    if(!input || !input.files || !input.files.length){ alert("Please select Excel file first"); return; }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:true, cellNF:false, cellText:false});
+        const sheetName = findSheetName(wb, preferredSheet);
+        const ws = wb.Sheets[sheetName];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:"", raw:true});
+        let headerRowIndex = 0, best = -999;
+        aoa.slice(0,20).forEach((row, idx) => {
+          const s = headerScore(row, metrics);
+          if(s > best){ best = s; headerRowIndex = idx; }
+        });
+        const headers = (aoa[headerRowIndex] || []).map(v => String(v ?? "").trim());
+        const dataRows = aoa.slice(headerRowIndex + 1).filter(row => (row || []).some(c => String(c ?? "").trim() !== ""));
+        done({headers, dataRows, sheetName, headerRow: headerRowIndex + 1});
+      }catch(err){
+        console.error(err);
+        alert("Excel reading failed. Please check file format.");
+      }
+    };
+    reader.readAsArrayBuffer(input.files[0]);
+  }
+  function cell(row, col){ return col >= 0 ? row[col] : ""; }
+  function maybeDate(v){
+    if(v instanceof Date && !isNaN(v)) return v;
+    if(typeof v === "number" && v > 20000 && v < 60000){ return new Date((v - 25569) * 86400 * 1000); }
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
+
+  window.importServiceExcelClient = function(){
+    readAoa("serviceExcelFile", "Service", ["ticketId","customer","status","serviceCost","invoiceValue","requestDate","closeDate","technician"], function(ctx){
+      const h = ctx.headers;
+      const c = {
+        ticketId: findCol(h,"ticketId",0), customer: findCol(h,"customer",1), requestDate: findCol(h,"requestDate",3), closeDate: findCol(h,"closeDate",4),
+        status: findCol(h,"status",5), serviceCost: findCol(h,"serviceCost",6), invoiceValue: findCol(h,"invoiceValue",7), technician: findCol(h,"technician",8)
+      };
+      let rows = [], closedTickets=0, serviceRevenue=0, serviceCost=0, totalResolutionHours=0, resolvedCount=0;
+      const body = document.getElementById("serviceRowsBody"); if(body) body.innerHTML = "";
+      ctx.dataRows.forEach((row, idx) => {
+        const hasMainData = [c.ticketId,c.customer,c.status,c.serviceCost,c.invoiceValue].some(i => String(cell(row,i) ?? "").trim() !== "");
+        if(!hasMainData) return;
+        const status = String(cell(row,c.status) || "").toLowerCase();
+        const cost = v4Num(cell(row,c.serviceCost));
+        const inv = v4Num(cell(row,c.invoiceValue));
+        const req = maybeDate(cell(row,c.requestDate));
+        const close = maybeDate(cell(row,c.closeDate));
+        serviceCost += cost; serviceRevenue += inv;
+        if(status.includes("closed") || status.includes("done") || status.includes("resolved") || status.includes("مغلق")) closedTickets++;
+        if(req && close && close >= req){ totalResolutionHours += (close-req)/36e5; resolvedCount++; }
+        rows.push({
+          "Ticket ID": cell(row,c.ticketId), "Customer": cell(row,c.customer), "Status": cell(row,c.status),
+          "Service Cost": cost, "Invoice Value": inv, "Technician": cell(row,c.technician)
+        });
+        if(body && rows.length <= 20){ body.innerHTML += `<tr><td>${cell(row,c.ticketId) || "-"}</td><td>${cell(row,c.customer) || "-"}</td><td>${cell(row,c.status) || "-"}</td><td>${v4Money(cost)}</td><td>${v4Money(inv)}</td><td>${cell(row,c.technician) || "-"}</td></tr>`; }
+      });
+      serviceRowsCache = rows;
+      const totalTickets = rows.length;
+      const openTickets = Math.max(0,totalTickets-closedTickets);
+      const serviceProfit = serviceRevenue-serviceCost;
+      const serviceMargin = serviceRevenue ? (serviceProfit/serviceRevenue)*100 : 0;
+      const closureRate = totalTickets ? (closedTickets/totalTickets)*100 : 0;
+      const avgResolutionHours = resolvedCount ? totalResolutionHours/resolvedCount : 0;
+      v4SetInput("svc_total_tickets", totalTickets); v4SetInput("svc_closed_tickets", closedTickets); v4SetInput("svc_open_tickets", openTickets);
+      v4SetInput("svc_revenue", serviceRevenue); v4SetInput("svc_cost", serviceCost); v4SetInput("svc_avg_resolution_hours", avgResolutionHours);
+      if(body && !rows.length) body.innerHTML = `<tr><td colspan="6">No service data imported.</td></tr>`;
+      applyServiceResults({totalTickets,closedTickets,openTickets,serviceRevenue,serviceCost,serviceProfit,serviceMargin,closureRate,avgResolutionHours});
+      alert(`Service Excel calculated successfully\nSheet: ${ctx.sheetName}\nHeader row: ${ctx.headerRow}\nRows: ${rows.length}\nRevenue column: ${h[c.invoiceValue] || "not found"}\nCost column: ${h[c.serviceCost] || "not found"}`);
+    });
+  };
+
+  window.importSalesKpiExcelClient = function(){
+    readAoa("salesKpiExcelFile", "Sales", ["target","actualSales","numberOfDeals","leads","wonDeals","lostDeals"], function(ctx){
+      const h = ctx.headers;
+      const c = {target:findCol(h,"target",2), actualSales:findCol(h,"actualSales",3), numberOfDeals:findCol(h,"numberOfDeals",4), leads:findCol(h,"leads",5), wonDeals:findCol(h,"wonDeals",6), lostDeals:findCol(h,"lostDeals",7)};
+      let totalTarget=0, actualSales=0, numberOfDeals=0, leads=0, wonDeals=0, lostDeals=0, rows=0;
+      ctx.dataRows.forEach(row => {
+        const hasMain = [c.target,c.actualSales,c.numberOfDeals,c.leads,c.wonDeals,c.lostDeals].some(i => String(cell(row,i) ?? "").trim() !== "");
+        if(!hasMain) return;
+        totalTarget += v4Num(cell(row,c.target)); actualSales += v4Num(cell(row,c.actualSales)); numberOfDeals += v4Num(cell(row,c.numberOfDeals));
+        leads += v4Num(cell(row,c.leads)); wonDeals += v4Num(cell(row,c.wonDeals)); lostDeals += v4Num(cell(row,c.lostDeals)); rows++;
+      });
+      v4SetInput("sales_target_manual", totalTarget); v4SetInput("sales_actual_manual", actualSales); v4SetInput("sales_deals_manual", numberOfDeals);
+      v4SetInput("sales_leads_manual", leads); v4SetInput("sales_won_manual", wonDeals); v4SetInput("sales_lost_manual", lostDeals);
+      calculateSalesKPIsManual();
+      alert(`Sales Excel calculated successfully\nSheet: ${ctx.sheetName}\nHeader row: ${ctx.headerRow}\nRows: ${rows}`);
+    });
+  };
+
+  window.importExcel = function(){
+    readAoa("excelFile", "PL", ["revenue","cogs","salaries","rent","marketing","otherExpenses","operatingExpenses","totalExpenses"], function(ctx){
+      const h = ctx.headers;
+      const c = {revenue:findCol(h,"revenue",1), cogs:findCol(h,"cogs",2), salaries:findCol(h,"salaries",3), rent:findCol(h,"rent",4), marketing:findCol(h,"marketing",5), otherExpenses:findCol(h,"otherExpenses",6), operatingExpenses:findCol(h,"operatingExpenses",-1), totalExpenses:findCol(h,"totalExpenses",8)};
+      let revenue=0,cogs=0,salaries=0,rent=0,marketing=0,otherExpenses=0,operatingOnly=0,totalExpensesCol=0,rows=0;
+      ctx.dataRows.forEach(row => {
+        const hasMain = [c.revenue,c.cogs,c.salaries,c.rent,c.marketing,c.otherExpenses,c.operatingExpenses,c.totalExpenses].some(i => i>=0 && String(cell(row,i) ?? "").trim() !== "");
+        if(!hasMain) return;
+        revenue += v4Num(cell(row,c.revenue)); cogs += v4Num(cell(row,c.cogs)); salaries += v4Num(cell(row,c.salaries)); rent += v4Num(cell(row,c.rent));
+        marketing += v4Num(cell(row,c.marketing)); otherExpenses += v4Num(cell(row,c.otherExpenses)); operatingOnly += v4Num(cell(row,c.operatingExpenses)); totalExpensesCol += v4Num(cell(row,c.totalExpenses)); rows++;
+      });
+      let operatingExpenses = 0, finalOtherExpenses = 0;
+      if(salaries || rent || marketing || otherExpenses){ operatingExpenses = salaries + rent + marketing; finalOtherExpenses = otherExpenses; }
+      else if(operatingOnly){ operatingExpenses = operatingOnly; finalOtherExpenses = 0; }
+      else if(totalExpensesCol){ operatingExpenses = totalExpensesCol; finalOtherExpenses = 0; }
+      v4SetInput("fs_revenue", revenue); v4SetInput("fs_cogs", cogs); v4SetInput("fs_operating_expenses", operatingExpenses); v4SetInput("fs_other_expenses", finalOtherExpenses);
+      const box = document.getElementById("financeDetectionBox"); if(box) box.style.display="block";
+      const sheetUsed = document.getElementById("financeSheetUsed"); if(sheetUsed) sheetUsed.innerHTML = `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);font-weight:700;color:white;">Sheet: ${ctx.sheetName} | Header Row: ${ctx.headerRow} | Data Rows: ${rows}</span>`;
+      const colsEl = document.getElementById("financeColumnsFound"); if(colsEl) colsEl.innerHTML = h.map(col => `<span style="display:inline-block;padding:8px 12px;border-radius:999px;background:#0b1220;border:1px solid rgba(255,255,255,0.08);color:#e5e7eb;font-size:14px;">${col}</span>`).join("");
+      calculateFinancials(); if(typeof syncTable === "function") syncTable();
+      alert(`P&L Excel calculated successfully\nSheet: ${ctx.sheetName}\nHeader row: ${ctx.headerRow}\nRows: ${rows}\nRevenue column: ${h[c.revenue] || "not found"}`);
+    });
+  };
+})();
+
 </script>
 </body>
 </html>
